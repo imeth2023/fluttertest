@@ -3,6 +3,7 @@ import 'api_service.dart'; // Adjust the import path as necessary
 import 'media_item.dart'; // Adjust the import path as necessary
 import 'search_screen.dart'; // Adjust the import path as necessary
 import 'details.dart'; // Import the DetailsPage
+import 'watchlist_page.dart'; // Make sure to create this page
 
 class HomePage extends StatefulWidget {
   @override
@@ -157,6 +158,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           IconButton(
             icon: Icon(Icons.filter_list),
             onPressed: _showGenreSelector,
+          ),
+          IconButton(
+            icon: Icon(Icons.view_list),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => WatchlistPage())),
           ),
         ],
       ),

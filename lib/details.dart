@@ -36,7 +36,7 @@ class _DetailsPageState extends State<DetailsPage> {
     try {
       await _firestoreService.toggleWatchlistStatus(widget.mediaItem);
       _checkWatchlistStatus(); // Refresh the button state
-      _showSnackbar(_isInWatchlist ? 'Added to Watchlist' : 'Removed from Watchlist');
+      _showSnackbar(_isInWatchlist ? 'remove from Watchlist' : 'add to  Watchlist');
     } catch (e) {
       _showSnackbar('Failed to update watchlist');
     }
