@@ -1,65 +1,85 @@
 import 'package:flutter/material.dart';
-import 'media_item.dart'; // Make sure this import points to the correct file path
+import 'media_item.dart';
+import 'firestore_service.dart';
 
-class DetailsPage extends StatelessWidget {
+class DetailsPage extends StatefulWidget {
   final MediaItem mediaItem;
 
   DetailsPage({required this.mediaItem});
 
   @override
+  _DetailsPageState createState() => _DetailsPageState();
+}
+
+class _DetailsPageState extends State<DetailsPage> {
+  bool _isInWatchlist = false;
+  final FirestoreService _firestoreService = FirestoreService();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkWatchlistStatus();
+  }
+
+  void _checkWatchlistStatus() async {
+    try {
+      bool isInWatchlist = await _firestoreService.isInWatchlist(widget.mediaItem.id);
+      setState(() {
+        _isInWatchlist = isInWatchlist;
+      });
+    } catch (e) {
+      _showSnackbar('Failed to check watchlist status');
+    }
+  }
+
+  void _toggleWatchlistStatus() async {
+    try {
+      await _firestoreService.toggleWatchlistStatus(widget.mediaItem);
+      _checkWatchlistStatus(); // Refresh the button state
+      _showSnackbar(_isInWatchlist ? 'Added to Watchlist' : 'Removed from Watchlist');
+    } catch (e) {
+      _showSnackbar('Failed to update watchlist');
+    }
+  }
+
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message),
+    ));
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(mediaItem.title),
+        title: Text(widget.mediaItem.title),
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Image.network(mediaItem.posterPath),
+          children: <Widget>[
+            SizedBox(height: 20),
+            Image.network(widget.mediaItem.posterPath, fit: BoxFit.cover),
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Text(
-                'Overview:',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                widget.mediaItem.title,
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Text(mediaItem.overview ?? 'No overview available.'),
-            ),
-            SizedBox(height: 10),
-            if (mediaItem.rating != null)
+            if (widget.mediaItem.overview != null)
               Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  'Rating: ${mediaItem.rating}',
-                  style: TextStyle(fontSize: 18),
-                ),
+                child: Text(widget.mediaItem.overview!),
               ),
-            SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                'Cast:',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: mediaItem.cast != null && mediaItem.cast!.isNotEmpty
-                  ? Column(
-                      children: mediaItem.cast!
-                          .map((actor) => ListTile(
-                                title: Text(actor.name),
-                                subtitle: Text('as ${actor.character}'),
-                              ))
-                          .toList(),
-                    )
-                  : Text('No cast information available.'),
-            ),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _toggleWatchlistStatus,
+        backgroundColor: _isInWatchlist ? Colors.red : Colors.green,
+        child: Icon(_isInWatchlist ? Icons.remove : Icons.add),
+        tooltip: _isInWatchlist ? 'Remove from Watched List' : 'Add to Watched List',
       ),
     );
   }

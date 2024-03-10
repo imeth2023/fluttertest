@@ -1,4 +1,5 @@
 class MediaItem {
+  final String id; // Unique identifier
   final String title;
   final String posterPath;
   final String? overview; // Optional field for movie or TV show overview
@@ -6,6 +7,7 @@ class MediaItem {
   final List<Actor>? cast; // Optional field for cast members
 
   MediaItem({
+    required this.id,
     required this.title,
     required this.posterPath,
     this.overview,
@@ -14,13 +16,14 @@ class MediaItem {
   });
 
   factory MediaItem.fromJson(Map<String, dynamic> json) {
-    // Parse the cast if available, otherwise, initialize it as an empty list
+    // Assuming the JSON contains an 'id' that can serve as a unique identifier
     List<Actor> cast = [];
     if (json.containsKey('credits') && json['credits']['cast'] != null) {
       cast = List<Actor>.from(json['credits']['cast'].map((x) => Actor.fromJson(x)));
     }
 
     return MediaItem(
+      id: json['id'].toString(), // Ensure the id is treated as a string
       title: json['title'] ?? json['name'], // Movies have titles, TV shows have names
       posterPath: 'https://image.tmdb.org/t/p/w500${json['poster_path']}',
       overview: json['overview'],
