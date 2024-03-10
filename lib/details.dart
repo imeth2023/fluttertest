@@ -36,7 +36,7 @@ class _DetailsPageState extends State<DetailsPage> {
     try {
       await _firestoreService.toggleWatchlistStatus(widget.mediaItem);
       _checkWatchlistStatus(); // Refresh the button state
-      _showSnackbar(_isInWatchlist ? 'remove from Watchlist' : 'add to  Watchlist');
+      _showSnackbar(_isInWatchlist ? 'Removed from Watchlist' : 'Added to Watchlist');
     } catch (e) {
       _showSnackbar('Failed to update watchlist');
     }
@@ -72,6 +72,13 @@ class _DetailsPageState extends State<DetailsPage> {
                 padding: const EdgeInsets.all(8.0),
                 child: Text(widget.mediaItem.overview!),
               ),
+            // Display the rating
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: widget.mediaItem.rating != null
+                ? Text('Rating: ${widget.mediaItem.rating}/10', style: TextStyle(fontSize: 18))
+                : Text('Rating: N/A', style: TextStyle(fontSize: 18)),
+            ),
           ],
         ),
       ),

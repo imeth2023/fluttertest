@@ -17,27 +17,63 @@ class WatchlistPage extends StatelessWidget {
         future: _firestoreService.fetchWatchlist(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return CircularProgressIndicator();
+            return Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Text('Error: ${snapshot.error}');
+            return Center(child: Text('Error: ${snapshot.error}'));
           }
-          if (snapshot.hasData) {
-            return ListView(
-              children: snapshot.data!.docs.map((DocumentSnapshot document) {
+          if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+            return GridView.builder(
+              padding: EdgeInsets.all(8),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2, // Number of columns
+                crossAxisSpacing: 8, // Space between columns
+                mainAxisSpacing: 8, // Space between rows
+                childAspectRatio: 0.75, // Aspect ratio of each grid cell
+              ),
+              itemCount: snapshot.data!.docs.length,
+              itemBuilder: (context, index) {
+                DocumentSnapshot document = snapshot.data!.docs[index];
                 MediaItem item = MediaItem.fromFirestore(document);
-                return ListTile(
-                  title: Text(item.title),
-                  subtitle: Text(item.overview ?? 'No description'),
-                  leading: Image.network(item.posterPath, width: 100, fit: BoxFit.cover),
+                return InkWell(
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => DetailsPage(mediaItem: item)),
                   ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      image: DecorationImage(
+                        image: NetworkImage(item.posterPath),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          borderRadius: BorderRadius.only(
+                            bottomLeft: Radius.circular(8),
+                            bottomRight: Radius.circular(8),
+                          ),
+                        ),
+                        child: Text(
+                          item.title,
+                          style: TextStyle(color: Colors.white, fontSize: 14),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                        ),
+                      ),
+                    ),
+                  ),
                 );
-              }).toList(),
+              },
             );
           } else {
-            return Text('Your watchlist is empty');
+            return Center(child: Text('Your watchlist is empty'));
           }
         },
       ),
