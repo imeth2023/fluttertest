@@ -27,6 +27,19 @@ class ApiService {
     }
   }
 
+  Future<MediaItem> fetchMediaDetailsWithCast(String mediaId, String mediaType) async {
+  final url = Uri.parse('$baseUrl/$mediaType/$mediaId?api_key=$apiKey&append_to_response=credits');
+  final response = await http.get(url);
+  if (response.statusCode == 200) {
+    final data = jsonDecode(response.body);
+    return MediaItem.fromJson(data);
+  } else {
+    throw Exception('Failed to load media details with cast');
+  }
+}
+
+
+
   // Updated method to use the multi search feature of TMDB API
   Future<List<MediaItem>> searchMedia(String query, String mediaType) async {
     // Change the URL to use the 'search/multi' endpoint

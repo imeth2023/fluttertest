@@ -36,14 +36,21 @@ class _LoginPageState extends State<LoginPage> {
           ElevatedButton(
             onPressed: () async {
               try {
-                await _auth.signInWithEmailAndPassword(
-                  email: _emailController.text,
-                  password: _passwordController.text,
-                );
-                Navigator.pushReplacementNamed(context, '/home');
-              } catch (e) {
-                // Handle error
-              }
+  await _auth.signInWithEmailAndPassword(
+    email: _emailController.text,
+    password: _passwordController.text,
+  );
+  Navigator.pushReplacementNamed(context, '/home');
+} catch (e) {
+  // Handle error by showing a SnackBar with a message
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text('The username or password is incorrect. Please try again.'),
+      backgroundColor: Colors.red, // Optional: to highlight the error
+    ),
+  );
+}
+
             },
             child: Text('Login'),
           ),

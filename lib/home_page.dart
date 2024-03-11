@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'api_service.dart'; // Adjust the import path as necessary
 import 'media_item.dart'; // Adjust the import path as necessary
 import 'search_screen.dart'; // Adjust the import path as necessary
-import 'details.dart'; // Import the DetailsPage
-import 'watchlist_page.dart'; // Make sure to create this page
+import 'details.dart'; // Adjust the import path as necessary
+import 'watchlist_page.dart'; // Adjust the import path as necessary
+import 'user_page.dart'; // Import the UserPage
 
 class HomePage extends StatefulWidget {
   @override
@@ -162,6 +163,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           IconButton(
             icon: Icon(Icons.view_list),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => WatchlistPage())),
+          ),
+          // User profile icon
+          IconButton(
+            icon: Icon(Icons.account_circle),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => UserPage())),
           ),
         ],
       ),
