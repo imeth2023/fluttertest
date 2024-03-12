@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart'; // Make sure this import points to your Firebase options file
-import 'login_page.dart'; // Assuming you have this file for login
-import 'signup_page.dart'; // Assuming you have this file for signup
-import 'home_page.dart'; // Assuming you have this file for the home page
-import 'package:flutter/material.dart';
+import 'firebase_options.dart';
+import 'login_page.dart';
+import 'signup_page.dart';
+import 'home_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,10 +21,21 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Firebase Auth Demo',
       theme: ThemeData.dark().copyWith(
-  scaffoldBackgroundColor: Colors.black,
-),
-
-      home: LoginPage(), // Set LoginPage as the initial route
+        scaffoldBackgroundColor: Colors.black,
+      ),
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.active) {
+            if (snapshot.hasData) {
+              return HomePage(); // User is signed in
+            } else {
+              return LoginPage(); // User is not signed in
+            }
+          }
+          return CircularProgressIndicator(); // Waiting for authentication state
+        },
+      ),
       routes: {
         '/login': (context) => LoginPage(),
         '/signup': (context) => SignupPage(),

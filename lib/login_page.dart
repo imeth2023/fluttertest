@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -10,6 +11,22 @@ class _LoginPageState extends State<LoginPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+  Future<void> _login() async {
+    try {
+      await _auth.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      // Optionally save login state to shared_preferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to sign in. Please check your credentials.')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,30 +51,11 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
           ElevatedButton(
-            onPressed: () async {
-              try {
-  await _auth.signInWithEmailAndPassword(
-    email: _emailController.text,
-    password: _passwordController.text,
-  );
-  Navigator.pushReplacementNamed(context, '/home');
-} catch (e) {
-  // Handle error by showing a SnackBar with a message
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text('The username or password is incorrect. Please try again.'),
-      backgroundColor: Colors.red, // Optional: to highlight the error
-    ),
-  );
-}
-
-            },
+            onPressed: _login,
             child: Text('Login'),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pushNamed(context, '/signup');
-            },
+            onPressed: () => Navigator.of(context).pushNamed('/signup'),
             child: Text('Don\'t have an account? Sign up'),
           ),
         ],
