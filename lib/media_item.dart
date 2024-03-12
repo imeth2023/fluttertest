@@ -49,24 +49,28 @@ class MediaItem {
 }
 
 class Actor {
+  final String id; // Added ID field
   final String name;
   final String character;
   final String? imageUrl;
-  final String? biography; // Added biography field
+  final String? biography; // Keep as is
 
   Actor({
+    required this.id,
     required this.name,
     required this.character,
     this.imageUrl,
-    this.biography, // Include biography in constructor
+    this.biography,
   });
 
   factory Actor.fromJson(Map<String, dynamic> json) {
-    return Actor(
-      name: json['name'],
-      character: json['character'],
-      imageUrl: json['profile_path'] != null ? 'https://image.tmdb.org/t/p/w500${json['profile_path']}' : null,
-      biography: json['biography'], // Parse biography from JSON
-    );
-  }
+  return Actor(
+    id: json['id'].toString(), // Assuming ID is always present
+    name: json['name'] ?? 'Unknown', // Providing a default value in case of null
+    character: json['character'] ?? 'Unknown', // Providing a default value in case of null
+    imageUrl: json['profile_path'] != null ? 'https://image.tmdb.org/t/p/w500${json['profile_path']}' : null,
+    biography: json['biography'], // Biography is nullable, so it's okay to be null
+  );
+}
+
 }

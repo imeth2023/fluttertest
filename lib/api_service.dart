@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'media_item.dart'; // Make sure this points to your MediaItem model
-import 'media_item.dart'; // Adjust this import to your Actor model (if you have it)
+import 'media_item.dart'; // Make sure this points to your actual MediaItem and Actor models
 
 class ApiService {
   final String apiKey = '8ac4b0da7612dfd2f781452f3d30719a';
@@ -11,7 +10,7 @@ class ApiService {
     final url = Uri.parse('$baseUrl/trending/$mediaType/$timeWindow?api_key=$apiKey');
     final response = await http.get(url);
     if (response.statusCode == 200) {
-      final List<dynamic> results = jsonDecode(response.body)['results'];
+      final List results = jsonDecode(response.body)['results'];
       return results.map<MediaItem>((data) => MediaItem.fromJson(data)).toList();
     } else {
       throw Exception('Failed to load trending $mediaType');
@@ -22,7 +21,7 @@ class ApiService {
     final url = Uri.parse('$baseUrl/discover/$mediaType?api_key=$apiKey&with_genres=$genreId&sort_by=$sortBy');
     final response = await http.get(url);
     if (response.statusCode == 200) {
-      final List<dynamic> results = jsonDecode(response.body)['results'];
+      final List results = jsonDecode(response.body)['results'];
       return results.map<MediaItem>((data) => MediaItem.fromJson(data)).toList();
     } else {
       throw Exception('Failed to load $mediaType by genre $genreId sorted by $sortBy');
@@ -40,12 +39,14 @@ class ApiService {
     }
   }
 
-  Future<List<dynamic>> searchMedia(String query, String mediaType) async {
+  Future<List<MediaItem>> searchMedia(String query, String mediaType) async {
     final url = Uri.parse('$baseUrl/search/multi?api_key=$apiKey&query=${Uri.encodeComponent(query)}');
     final response = await http.get(url);
     if (response.statusCode == 200) {
-      final List<dynamic> results = jsonDecode(response.body)['results'];
-      List<dynamic> items = results.where((result) => result['media_type'] == mediaType || mediaType == 'all').map((data) => MediaItem.fromJson(data)).toList();
+      final List results = jsonDecode(response.body)['results'];
+      // Filter by media type if not searching across all media types
+      List<MediaItem> items = results.where((result) => result['media_type'] == mediaType || mediaType == 'all')
+                                      .map<MediaItem>((data) => MediaItem.fromJson(data)).toList();
       return items;
     } else {
       throw Exception('Failed to search across all media types with query "$query"');
@@ -56,7 +57,7 @@ class ApiService {
     final url = Uri.parse('$baseUrl/search/person?api_key=$apiKey&query=${Uri.encodeComponent(query)}');
     final response = await http.get(url);
     if (response.statusCode == 200) {
-      final List<dynamic> results = jsonDecode(response.body)['results'];
+      final List results = jsonDecode(response.body)['results'];
       return results.map<Actor>((data) => Actor.fromJson(data)).toList();
     } else {
       throw Exception('Failed to search for actors with query "$query"');
@@ -74,13 +75,18 @@ class ApiService {
     }
   }
 
-  Future<MediaItem> fetchLatestMovies(String mediaType) async {
-    final url = Uri.parse('$baseUrl/$mediaType/latest?api_key=$apiKey');
+  Future<Map<String, int>> fetchGenres(String mediaType) async {
+    final url = Uri.parse('$baseUrl/genre/$mediaType/list?api_key=$apiKey');
     final response = await http.get(url);
     if (response.statusCode == 200) {
-      return MediaItem.fromJson(jsonDecode(response.body));
+      final jsonResponse = json.decode(response.body);
+      final Map<String, int> genres = {};
+      for (var genre in jsonResponse['genres']) {
+        genres[genre['name']] = genre['id'];
+      }
+      return genres;
     } else {
-      throw Exception('Failed to load latest $mediaType');
+      throw Exception('Failed to load genres');
     }
   }
 }

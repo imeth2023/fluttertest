@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'api_service.dart'; // Adjust the import path as necessary
 import 'media_item.dart'; // Adjust the import path as necessary
-import 'actor_details_page.dart'; // Make sure to create and import ActorDetailsPage
-import 'details.dart'; // Make sure this import points to your DetailsPage file
-import 'actor_details_page.dart'; // Ensure you have an Actor model
+import 'details.dart'; // Adjust the import path as necessary
+import 'actor_details_page.dart'; // Adjust the import path as necessary
+// Removed redundant import of 'media_item.dart'
 
 class SearchScreen extends StatefulWidget {
   @override
@@ -51,7 +51,10 @@ class _SearchScreenState extends State<SearchScreen> {
                           leading: Icon(Icons.movie),
                           title: Text('Movies'),
                           onTap: () {
-                            setState(() => _searchType = 'movie');
+                            setState(() {
+                              _searchType = 'movie';
+                              if (_searchQuery.isNotEmpty) _performSearch(_searchQuery);
+                            });
                             Navigator.pop(context);
                           },
                         ),
@@ -59,7 +62,10 @@ class _SearchScreenState extends State<SearchScreen> {
                           leading: Icon(Icons.tv),
                           title: Text('TV Shows'),
                           onTap: () {
-                            setState(() => _searchType = 'tv');
+                            setState(() {
+                              _searchType = 'tv';
+                              if (_searchQuery.isNotEmpty) _performSearch(_searchQuery);
+                            });
                             Navigator.pop(context);
                           },
                         ),
@@ -67,7 +73,10 @@ class _SearchScreenState extends State<SearchScreen> {
                           leading: Icon(Icons.person),
                           title: Text('Actors'),
                           onTap: () {
-                            setState(() => _searchType = 'actor');
+                            setState(() {
+                              _searchType = 'actor';
+                              if (_searchQuery.isNotEmpty) _performSearch(_searchQuery);
+                            });
                             Navigator.pop(context);
                           },
                         ),
@@ -97,20 +106,26 @@ class _SearchScreenState extends State<SearchScreen> {
               itemCount: _searchResults.length,
               itemBuilder: (context, index) {
                 final item = _searchResults[index];
-                return ListTile(
-                  leading: item is MediaItem && item.posterPath.isNotEmpty
-                      ? Image.network(item.posterPath)
-                      : null,
-                  title: Text(item is MediaItem ? item.title : (item as Actor).name),
-                  subtitle: item is Actor ? Text("Tap to view details") : null,
-                  onTap: () {
-                    if (item is MediaItem) {
-                      Navigator.of(context).push(MaterialPageRoute(builder: (context) => DetailsPage(mediaItem: item)));
-                    } else if (item is Actor) {
-                      Navigator.of(context).push(MaterialPageRoute(builder: (context) => ActorDetailsPage(actor: item)));
-                    }
-                  },
-                );
+                // Use isInstanceOf<T>() checks for proper type checking
+                if (item is MediaItem) {
+                  return ListTile(
+                    leading: item.posterPath.isNotEmpty
+                        ? Image.network(item.posterPath, width: 50, fit: BoxFit.cover)
+                        : null,
+                    title: Text(item.title),
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => DetailsPage(mediaItem: item))),
+                  );
+                } else if (item is Actor) {
+                  return ListTile(
+                    leading: item.imageUrl != null
+                        ? Image.network(item.imageUrl!, width: 50, fit: BoxFit.cover)
+                        : null,
+                    title: Text(item.name),
+                    subtitle: Text("Tap to view details"),
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => ActorDetailsPage(actor: item))),
+                  );
+                }
+                return Container(); // Fallback in case item doesn't match expected types
               },
             ),
           ),

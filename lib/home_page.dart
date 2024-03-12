@@ -4,7 +4,7 @@ import 'media_item.dart'; // Adjust the import path as necessary
 import 'search_screen.dart'; // Adjust the import path as necessary
 import 'details.dart'; // Adjust the import path as necessary
 import 'watchlist_page.dart'; // Adjust the import path as necessary
-import 'user_page.dart'; // Import the UserPage
+import 'user_page.dart'; // Adjust the import path as necessary
 
 class HomePage extends StatefulWidget {
   @override
@@ -15,17 +15,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   final ApiService _apiService = ApiService();
   late TabController _tabController;
   int? _selectedGenre;
-  Map<String, int> genres = {
-    'Action': 28,
-    'Comedy': 35,
-    'Romance': 10749,
-    'Kids': 10751,
-  };
+  Future<Map<String, int>>? _genresFuture;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _genresFuture = _apiService.fetchGenres('movie'); // Fetch genres for movies
   }
 
   @override
@@ -34,7 +30,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     super.dispose();
   }
 
-  void _showGenreSelector() {
+  void _showGenreSelector() async {
+    final genres = await _genresFuture; // Wait for genres to be fetched
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -42,7 +39,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           title: Text("Select a Genre"),
           content: SingleChildScrollView(
             child: ListBody(
-              children: genres.entries.map((entry) {
+              children: genres!.entries.map((entry) {
                 return ListTile(
                   title: Text(entry.key),
                   onTap: () {
@@ -164,7 +161,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             icon: Icon(Icons.view_list),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => WatchlistPage())),
           ),
-          // User profile icon
           IconButton(
             icon: Icon(Icons.account_circle),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => UserPage())),
