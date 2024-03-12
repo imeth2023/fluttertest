@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'api_service.dart'; // Adjust the import path as necessary
 import 'media_item.dart'; // Adjust the import path as necessary
-import 'search_screen.dart'; // Adjust the import path as necessary
 import 'details.dart'; // Adjust the import path as necessary
+import 'search_screen.dart'; // Adjust the import path as necessary
 import 'watchlist_page.dart'; // Adjust the import path as necessary
-import 'user_page.dart'; // Import the UserPage
+import 'user_page.dart'; // Ensure this is pointing to your UserPage
 
 class HomePage extends StatefulWidget {
   @override
@@ -71,21 +71,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     );
   }
 
-  Widget _buildMediaList(String mediaType) {
-    final Future<List<MediaItem>> futureMedia = _selectedGenre != null
-        ? _apiService.fetchMediaByGenre(mediaType, _selectedGenre!, sortBy: 'popularity.desc')
-        : _apiService.fetchTrending(mediaType);
-
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          _buildHorizontalMediaList(futureMedia, _selectedGenre != null ? "Genre Specific" : "Trending"),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHorizontalMediaList(Future<List<MediaItem>> futureMedia, String title) {
+  Widget _buildMediaScroll(String title, Future<List<MediaItem>> futureMedia) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -102,7 +88,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 return Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
+                return Text('Error: ${snapshot.error}');
               }
               if (snapshot.hasData) {
                 return ListView.separated(
@@ -111,18 +97,19 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   separatorBuilder: (_, __) => SizedBox(width: 8),
                   itemBuilder: (context, index) {
                     MediaItem item = snapshot.data![index];
-                    return InkWell(
-                      onTap: () {
-                        Navigator.of(context).push(MaterialPageRoute(
-                          builder: (context) => DetailsPage(mediaItem: item),
-                        ));
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(4.0),
+                    return GestureDetector(
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => DetailsPage(mediaItem: item))),
+                      child: Container(
+                        width: 140,
                         child: Column(
                           children: [
-                            Expanded(child: Image.network(item.posterPath, fit: BoxFit.cover)),
-                            Text(item.title, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14)),
+                            Expanded(
+                              child: Image.network('https://image.tmdb.org/t/p/w500${item.posterPath}', fit: BoxFit.cover),
+                            ),
+                            Padding(
+                              padding: EdgeInsets.only(top: 8.0),
+                              child: Text(item.title, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14)),
+                            ),
                           ],
                         ),
                       ),
@@ -130,7 +117,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   },
                 );
               } else {
-                return Text("No data available");
+                return SizedBox.shrink(); // Placeholder for no data
               }
             },
           ),
@@ -154,7 +141,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         actions: [
           IconButton(
             icon: Icon(Icons.search),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => SearchScreen())),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SearchScreen())),
           ),
           IconButton(
             icon: Icon(Icons.filter_list),
@@ -162,21 +149,22 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           ),
           IconButton(
             icon: Icon(Icons.view_list),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => WatchlistPage())),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => WatchlistPage())),
           ),
-          // User profile icon
           IconButton(
             icon: Icon(Icons.account_circle),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => UserPage())),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => UserPage())),
           ),
         ],
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildMediaList('movie'), // Movies tab content
-          _buildMediaList('tv'), // TV Shows tab content
-        ],
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildMediaScroll('Trending Movies', _apiService.fetchTrending('movie')),
+            _buildMediaScroll('Trending TV Shows', _apiService.fetchTrending('tv')),
+            // Add more media sections as needed here.
+          ],
+        ),
       ),
     );
   }
