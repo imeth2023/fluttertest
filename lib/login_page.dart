@@ -21,9 +21,31 @@ class _LoginPageState extends State<LoginPage> {
       // Optionally save login state to shared_preferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', true);
+      // Navigate to home page or main area of app after login
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to sign in. Please check your credentials.')),
+      );
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter your email address to reset your password.')),
+      );
+      return;
+    }
+
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('A password reset link has been sent to your email.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to send password reset email. Please check your email address and try again.')),
       );
     }
   }
@@ -57,6 +79,10 @@ class _LoginPageState extends State<LoginPage> {
           TextButton(
             onPressed: () => Navigator.of(context).pushNamed('/signup'),
             child: Text('Don\'t have an account? Sign up'),
+          ),
+          TextButton(
+            onPressed: _resetPassword,
+            child: Text('Forgot Password?'),
           ),
         ],
       ),
