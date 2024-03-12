@@ -36,7 +36,7 @@ class ApiService {
   } else {
     throw Exception('Failed to load media details with cast');
   }
-}
+    }
 
 
 
@@ -60,4 +60,30 @@ class ApiService {
       throw Exception('Failed to search across all media types with query "$query"');
     }
   }
+
+  Future<List<Actor>> searchActors(String query) async {
+    final url = Uri.parse('$baseUrl/search/person?api_key=$apiKey&query=${Uri.encodeComponent(query)}');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final List<dynamic> results = jsonDecode(response.body)['results'];
+      return results.map((data) => Actor.fromJson(data)).toList();
+    } else {
+      throw Exception('Failed to search for actors with query "$query"');
+    }
+  }
+
+  // New method for fetching actor details, including their biography and participated media
+  Future<Actor> fetchActorDetails(String actorId) async {
+    final url = Uri.parse('$baseUrl/person/$actorId?api_key=$apiKey&append_to_response=combined_credits');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return Actor.fromJson(data);
+    } else {
+      throw Exception('Failed to load actor details for actor ID $actorId');
+    }
+  }
+
+
+  
 }

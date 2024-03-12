@@ -9,7 +9,6 @@ class UserPage extends StatefulWidget {
 class _UserPageState extends State<UserPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   User? user;
-  TextEditingController passwordController = TextEditingController();
   TextEditingController newPasswordController = TextEditingController();
 
   @override
@@ -27,15 +26,28 @@ class _UserPageState extends State<UserPage> {
         newPasswordController.clear();
       }).catchError((error) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("Password can't be changed" + error.toString()),
+          content: Text("Password can't be changed: " + error.toString()),
         ));
       });
     } catch (e) {
-      print(e);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text("An error occurred. Please try again later."),
       ));
     }
+  }
+
+  void _signOut() async {
+    await _auth.signOut().then((_) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text("You have successfully signed out."),
+      ));
+      // Assuming '/' is your route for the LoginPage as set in your main.dart
+      Navigator.pushReplacementNamed(context, '/');
+    }).catchError((error) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text("An error occurred during sign out: " + error.toString()),
+      ));
+    });
   }
 
   @override
@@ -43,6 +55,13 @@ class _UserPageState extends State<UserPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('User Profile'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.exit_to_app),
+            onPressed: _signOut,
+            tooltip: 'Sign Out',
+          ),
+        ],
       ),
       body: Padding(
         padding: EdgeInsets.all(16.0),
@@ -63,6 +82,9 @@ class _UserPageState extends State<UserPage> {
             ElevatedButton(
               onPressed: _changePassword,
               child: Text('Change Password'),
+              style: ButtonStyle(
+                backgroundColor: MaterialStateProperty.all<Color>(Theme.of(context).primaryColor),
+              ),
             ),
           ],
         ),

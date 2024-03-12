@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'api_service.dart'; // Adjust the import path as necessary
 import 'media_item.dart'; // Adjust the import path as necessary
+import 'actor_details_page.dart'; // Make sure to create and import ActorDetailsPage
 import 'details.dart'; // Make sure this import points to your DetailsPage file
+import 'actor_details_page.dart'; // Ensure you have an Actor model
 
 class SearchScreen extends StatefulWidget {
   @override
@@ -10,13 +12,19 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final ApiService _apiService = ApiService();
-  List<MediaItem> _searchResults = [];
+  List<dynamic> _searchResults = []; // Dynamic to accommodate MediaItem or Actor
   String _searchQuery = "";
-  String _mediaType = "movie"; // Default search for movies
+  String _searchType = "movie"; // Can be 'movie', 'tv', or 'actor'
 
   void _performSearch(String query) async {
     if (query.isNotEmpty) {
-      List<MediaItem> results = await _apiService.searchMedia(query, _mediaType);
+      var results;
+      if (_searchType == 'actor') {
+        results = await _apiService.searchActors(query); // Use your ApiService to search actors
+      } else {
+        results = await _apiService.searchMedia(query, _searchType);
+      }
+
       setState(() {
         _searchQuery = query;
         _searchResults = results;
@@ -29,15 +37,46 @@ class _SearchScreenState extends State<SearchScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Search'),
-        actions: [
+        actions: <Widget>[
           IconButton(
-            icon: Icon(_mediaType == "movie" ? Icons.movie : Icons.tv),
-            onPressed: () => setState(() {
-              _mediaType = _mediaType == "movie" ? "tv" : "movie";
-              if (_searchQuery.isNotEmpty) {
-                _performSearch(_searchQuery);
-              }
-            }),
+            icon: Icon(Icons.swap_vert),
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                builder: (BuildContext context) {
+                  return SafeArea(
+                    child: Wrap(
+                      children: <Widget>[
+                        ListTile(
+                          leading: Icon(Icons.movie),
+                          title: Text('Movies'),
+                          onTap: () {
+                            setState(() => _searchType = 'movie');
+                            Navigator.pop(context);
+                          },
+                        ),
+                        ListTile(
+                          leading: Icon(Icons.tv),
+                          title: Text('TV Shows'),
+                          onTap: () {
+                            setState(() => _searchType = 'tv');
+                            Navigator.pop(context);
+                          },
+                        ),
+                        ListTile(
+                          leading: Icon(Icons.person),
+                          title: Text('Actors'),
+                          onTap: () {
+                            setState(() => _searchType = 'actor');
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
           ),
         ],
       ),
@@ -59,14 +98,17 @@ class _SearchScreenState extends State<SearchScreen> {
               itemBuilder: (context, index) {
                 final item = _searchResults[index];
                 return ListTile(
-                  leading: item.posterPath.isNotEmpty ? Image.network(item.posterPath) : null,
-                  title: Text(item.title),
+                  leading: item is MediaItem && item.posterPath.isNotEmpty
+                      ? Image.network(item.posterPath)
+                      : null,
+                  title: Text(item is MediaItem ? item.title : (item as Actor).name),
+                  subtitle: item is Actor ? Text("Tap to view details") : null,
                   onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => DetailsPage(mediaItem: item),
-                      ),
-                    );
+                    if (item is MediaItem) {
+                      Navigator.of(context).push(MaterialPageRoute(builder: (context) => DetailsPage(mediaItem: item)));
+                    } else if (item is Actor) {
+                      Navigator.of(context).push(MaterialPageRoute(builder: (context) => ActorDetailsPage(actor: item)));
+                    }
                   },
                 );
               },

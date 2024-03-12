@@ -52,14 +52,21 @@ class Actor {
   final String name;
   final String character;
   final String? imageUrl;
+  final String? biography; // Added biography field
 
-  Actor({required this.name, required this.character, this.imageUrl});
+  Actor({
+    required this.name,
+    required this.character,
+    this.imageUrl,
+    this.biography, // Include biography in constructor
+  });
 
   factory Actor.fromJson(Map<String, dynamic> json) {
     return Actor(
       name: json['name'],
       character: json['character'],
       imageUrl: json['profile_path'] != null ? 'https://image.tmdb.org/t/p/w500${json['profile_path']}' : null,
+      biography: json['biography'], // Parse biography from JSON
     );
   }
 }
