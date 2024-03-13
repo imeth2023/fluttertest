@@ -28,6 +28,19 @@ class ApiService {
     }
   }
 
+  Future<MediaItem?> fetchMediaDetailsById(String mediaId) async {
+    final url = Uri.parse('$baseUrl/movie/$mediaId?api_key=$apiKey');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return MediaItem.fromJson(data);
+    } else {
+      // Log or handle the error
+      print('Failed to load media details for ID $mediaId');
+      return null;
+    }
+  }
+
   Future<MediaItem> fetchMediaDetailsWithCast(String mediaId, String mediaType) async {
     final url = Uri.parse('$baseUrl/$mediaType/$mediaId?api_key=$apiKey&append_to_response=credits');
     final response = await http.get(url);
@@ -53,16 +66,7 @@ class ApiService {
     }
   }
 
-  Future<List<Actor>> searchActors(String query) async {
-    final url = Uri.parse('$baseUrl/search/person?api_key=$apiKey&query=${Uri.encodeComponent(query)}');
-    final response = await http.get(url);
-    if (response.statusCode == 200) {
-      final List results = jsonDecode(response.body)['results'];
-      return results.map<Actor>((data) => Actor.fromJson(data)).toList();
-    } else {
-      throw Exception('Failed to search for actors with query "$query"');
-    }
-  }
+  
 
   Future<Actor> fetchActorDetails(String actorId) async {
     final url = Uri.parse('$baseUrl/person/$actorId?api_key=$apiKey&append_to_response=combined_credits');
@@ -87,6 +91,28 @@ class ApiService {
       return genres;
     } else {
       throw Exception('Failed to load genres');
+    }
+  }
+
+  Future<List<Actor>> searchActors(String query) async {
+    final url = Uri.parse('$baseUrl/search/person?api_key=$apiKey&query=${Uri.encodeComponent(query)}');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final List results = jsonDecode(response.body)['results'];
+      return results.map<Actor>((data) => Actor.fromJson(data)).toList();
+    } else {
+      throw Exception('Failed to search for actors with query "$query"');
+    }
+  }
+
+  Future<List<MediaItem>> fetchActorFilmography(String actorId) async {
+    final url = Uri.parse('$baseUrl/person/$actorId/combined_credits?api_key=$apiKey');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final results = jsonDecode(response.body)['cast'];
+      return results.map<MediaItem>((data) => MediaItem.fromJson(data)).toList();
+    } else {
+      throw Exception('Failed to fetch filmography for actor ID $actorId');
     }
   }
 

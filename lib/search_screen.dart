@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'api_service.dart'; // Adjust the import path as necessary
-import 'media_item.dart'; // Adjust the import path as necessary
-import 'details.dart'; // Adjust the import path as necessary
-import 'actor_details_page.dart'; // Adjust the import path as necessary
-// Removed redundant import of 'media_item.dart'
+import 'api_service.dart'; // Adjust with your actual import path
+import 'media_item.dart'; // Adjust with your actual import path
+import 'details.dart'; // Adjust with your actual import path
 
 class SearchScreen extends StatefulWidget {
   @override
@@ -12,23 +10,71 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final ApiService _apiService = ApiService();
-  List<dynamic> _searchResults = []; // Dynamic to accommodate MediaItem or Actor
-  String _searchQuery = "";
-  String _searchType = "movie"; // Can be 'movie', 'tv', or 'actor'
+  List<MediaItem> _searchResults = [];
+  bool _isLoading = false;
+  String _searchType = "movie"; // Default to 'movie'
+  final List<String> _searchTypes = ['actor', 'movie', 'tv']; // Options for dropdown
 
   void _performSearch(String query) async {
-    if (query.isNotEmpty) {
-      var results;
-      if (_searchType == 'actor') {
-        results = await _apiService.searchActors(query); // Use your ApiService to search actors
-      } else {
-        results = await _apiService.searchMedia(query, _searchType);
-      }
+    if (query.isEmpty) return;
+    setState(() {
+      _isLoading = true;
+      _searchResults = []; // Clear previous results
+    });
 
+    try {
+      if (_searchType == 'actor') {
+        // For actor searches, including the possibility of searching for common films among multiple actors
+        await _handleActorSearch(query);
+      } else {
+        // For movie and TV show searches
+        List<MediaItem> mediaItems = await _apiService.searchMedia(query, _searchType);
+        setState(() {
+          _searchResults = mediaItems;
+        });
+      }
+    } catch (e) {
+      print("Error performing search: $e"); // Consider showing an error message to the user
+    } finally {
       setState(() {
-        _searchQuery = query;
-        _searchResults = results;
+        _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _handleActorSearch(String query) async {
+    List<String> actorNames = query.split(',').map((name) => name.trim()).toList();
+    if (actorNames.length > 1) {
+      // Handle multi-actor search
+      List<Set<String>> filmographiesIds = [];
+      for (String name in actorNames) {
+        List<Actor> actors = await _apiService.searchActors(name);
+        if (actors.isNotEmpty) {
+          List<MediaItem> filmography = await _apiService.fetchActorFilmography(actors.first.id);
+          Set<String> filmIds = filmography.map((item) => item.id).toSet();
+          filmographiesIds.add(filmIds);
+        }
+      }
+      Set<String> commonFilmIds = filmographiesIds.reduce((a, b) => a.intersection(b));
+      List<MediaItem> commonFilms = [];
+      for (String id in commonFilmIds) {
+        MediaItem? film = await _apiService.fetchMediaDetailsById(id); // Ensure this method is implemented in ApiService
+        if (film != null) {
+          commonFilms.add(film);
+        }
+      }
+      setState(() {
+        _searchResults = commonFilms;
+      });
+    } else if (actorNames.isNotEmpty) {
+      // Single actor search
+      List<Actor> actors = await _apiService.searchActors(actorNames.first);
+      if (actors.isNotEmpty) {
+        List<MediaItem> filmography = await _apiService.fetchActorFilmography(actors.first.id);
+        setState(() {
+          _searchResults = filmography;
+        });
+      }
     }
   }
 
@@ -38,54 +84,21 @@ class _SearchScreenState extends State<SearchScreen> {
       appBar: AppBar(
         title: Text('Search'),
         actions: <Widget>[
-          IconButton(
-            icon: Icon(Icons.swap_vert),
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                builder: (BuildContext context) {
-                  return SafeArea(
-                    child: Wrap(
-                      children: <Widget>[
-                        ListTile(
-                          leading: Icon(Icons.movie),
-                          title: Text('Movies'),
-                          onTap: () {
-                            setState(() {
-                              _searchType = 'movie';
-                              if (_searchQuery.isNotEmpty) _performSearch(_searchQuery);
-                            });
-                            Navigator.pop(context);
-                          },
-                        ),
-                        ListTile(
-                          leading: Icon(Icons.tv),
-                          title: Text('TV Shows'),
-                          onTap: () {
-                            setState(() {
-                              _searchType = 'tv';
-                              if (_searchQuery.isNotEmpty) _performSearch(_searchQuery);
-                            });
-                            Navigator.pop(context);
-                          },
-                        ),
-                        ListTile(
-                          leading: Icon(Icons.person),
-                          title: Text('Actors'),
-                          onTap: () {
-                            setState(() {
-                              _searchType = 'actor';
-                              if (_searchQuery.isNotEmpty) _performSearch(_searchQuery);
-                            });
-                            Navigator.pop(context);
-                          },
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              );
+          DropdownButton<String>(
+            underline: Container(), // Removes the underline
+            value: _searchType,
+            onChanged: (String? newValue) {
+              setState(() {
+                _searchType = newValue!;
+                _searchResults = []; // Optionally clear results on search type change
+              });
             },
+            items: _searchTypes.map<DropdownMenuItem<String>>((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(value.toUpperCase()),
+              );
+            }).toList(),
           ),
         ],
       ),
@@ -96,38 +109,29 @@ class _SearchScreenState extends State<SearchScreen> {
             child: TextField(
               decoration: InputDecoration(
                 labelText: 'Search...',
-                suffixIcon: Icon(Icons.search),
+                suffixIcon: _isLoading ? CircularProgressIndicator() : Icon(Icons.search),
               ),
               onSubmitted: _performSearch,
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              itemCount: _searchResults.length,
-              itemBuilder: (context, index) {
-                final item = _searchResults[index];
-                // Use isInstanceOf<T>() checks for proper type checking
-                if (item is MediaItem) {
-                  return ListTile(
-                    leading: item.posterPath.isNotEmpty
-                        ? Image.network(item.posterPath, width: 50, fit: BoxFit.cover)
-                        : null,
-                    title: Text(item.title),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => DetailsPage(mediaItem: item))),
-                  );
-                } else if (item is Actor) {
-                  return ListTile(
-                    leading: item.imageUrl != null
-                        ? Image.network(item.imageUrl!, width: 50, fit: BoxFit.cover)
-                        : null,
-                    title: Text(item.name),
-                    subtitle: Text("Tap to view details"),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => ActorDetailsPage(actor: item))),
-                  );
-                }
-                return Container(); // Fallback in case item doesn't match expected types
-              },
-            ),
+            child: _isLoading
+                ? Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    itemCount: _searchResults.length,
+                    itemBuilder: (context, index) {
+                      final item = _searchResults[index];
+                      return ListTile(
+                        leading: item.posterPath.isNotEmpty
+                            ? Image.network(item.posterPath, width: 50, fit: BoxFit.cover)
+                            : Icon(Icons.movie),
+                        title: Text(item.title),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (context) => DetailsPage(mediaItem: item)),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
