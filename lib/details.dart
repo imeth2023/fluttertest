@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_5/media_item.dart'; // Adjust the import path as needed
-import 'package:flutter_application_5/api_service.dart'; // Adjust the import path as needed
-
+import 'package:flutter_application_5/media_item.dart'; // Adjust this import path to where your MediaItem class is located
+import 'package:flutter_application_5/firestore_service.dart'; // Adjust this import path to where your FirestoreService class is located
+import 'package:flutter_application_5/api_service.dart'; // Adjust this import path to where your ApiService class is located
 
 class DetailsPage extends StatefulWidget {
   final MediaItem mediaItem;
@@ -14,12 +14,15 @@ class DetailsPage extends StatefulWidget {
 
 class _DetailsPageState extends State<DetailsPage> {
   bool _isLoading = true;
+  bool _isInWatchlist = false;
   final ApiService _apiService = ApiService();
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   void initState() {
     super.initState();
     _fetchAdditionalDetails();
+    _checkWatchlistStatus();
   }
 
   Future<void> _fetchAdditionalDetails() async {
@@ -37,6 +40,18 @@ class _DetailsPageState extends State<DetailsPage> {
       setState(() => _isLoading = false);
       _showSnackbar("Failed to load additional details: $e");
     }
+  }
+
+  Future<void> _checkWatchlistStatus() async {
+    final status = await _firestoreService.isInWatchlist(widget.mediaItem.id);
+    setState(() {
+      _isInWatchlist = status;
+    });
+  }
+
+  void _toggleWatchlist() async {
+    await _firestoreService.toggleWatchlistStatus(widget.mediaItem);
+    _checkWatchlistStatus();
   }
 
   void _showSnackbar(String message) {
@@ -102,7 +117,7 @@ class _DetailsPageState extends State<DetailsPage> {
                     final similarMovie = widget.mediaItem.similarMovies![index];
                     return GestureDetector(
                       onTap: () {
-                        // Implement navigation to movie details
+                        // Implement navigation to similar movie details
                       },
                       child: Padding(
                         padding: const EdgeInsets.all(4.0),
@@ -168,6 +183,11 @@ class _DetailsPageState extends State<DetailsPage> {
                 ],
               ),
             ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _toggleWatchlist,
+        child: Icon(_isInWatchlist ? Icons.remove : Icons.add),
+        tooltip: _isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist',
+      ),
     );
   }
 }
