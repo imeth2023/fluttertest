@@ -116,5 +116,35 @@ class ApiService {
     }
   }
 
+  Future<List<String>> fetchTrailers(String mediaType, String mediaId) async {
+    final response = await http.get(Uri.parse('$baseUrl/$mediaType/$mediaId/videos?api_key=$apiKey'));
+    if (response.statusCode == 200) {
+      final List<dynamic> trailers = jsonDecode(response.body)['results'];
+      return trailers.map((trailer) => "https://www.youtube.com/watch?v=${trailer['key']}").toList();
+    } else {
+      throw Exception('Failed to load trailers');
+    }
+  }
+
+  Future<List<Actor>> fetchCastDetails(String mediaType, String mediaId) async {
+    final response = await http.get(Uri.parse('$baseUrl/$mediaType/$mediaId/credits?api_key=$apiKey'));
+    if (response.statusCode == 200) {
+      final List<dynamic> cast = jsonDecode(response.body)['cast'];
+      return cast.map((actor) => Actor.fromJson(actor)).toList();
+    } else {
+      throw Exception('Failed to load cast details');
+    }
+  }
+
+  Future<List<MediaItem>> fetchSimilarMovies(String mediaType, String mediaId) async {
+    final response = await http.get(Uri.parse('$baseUrl/$mediaType/$mediaId/similar?api_key=$apiKey'));
+    if (response.statusCode == 200) {
+      final List<dynamic> movies = jsonDecode(response.body)['results'];
+      return movies.map((movie) => MediaItem.fromJson(movie)).toList();
+    } else {
+      throw Exception('Failed to load similar movies');
+    }
+  }
+
   
 }

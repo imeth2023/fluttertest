@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'media_item.dart'; // Ensure this includes the updated model definitions
-import 'firestore_service.dart';
+import 'package:flutter_application_5/media_item.dart'; // Adjust the import path as needed
+import 'package:flutter_application_5/api_service.dart'; // Adjust the import path as needed
+
 
 class DetailsPage extends StatefulWidget {
   final MediaItem mediaItem;
@@ -12,66 +13,34 @@ class DetailsPage extends StatefulWidget {
 }
 
 class _DetailsPageState extends State<DetailsPage> {
-  bool _isInWatchlist = false;
-  final FirestoreService _firestoreService = FirestoreService();
-  bool _isLoading = true; // Track loading state
+  bool _isLoading = true;
+  final ApiService _apiService = ApiService();
 
   @override
   void initState() {
     super.initState();
-    _checkWatchlistStatus();
+    _fetchAdditionalDetails();
   }
 
-  Future<void> _checkWatchlistStatus() async {
+  Future<void> _fetchAdditionalDetails() async {
     try {
-      bool isInWatchlist = await _firestoreService.isInWatchlist(widget.mediaItem.id);
+      final trailers = await _apiService.fetchTrailers('movie', widget.mediaItem.id);
+      final cast = await _apiService.fetchCastDetails('movie', widget.mediaItem.id);
+      final similarMovies = await _apiService.fetchSimilarMovies('movie', widget.mediaItem.id);
       setState(() {
-        _isInWatchlist = isInWatchlist;
-        _isLoading = false; // Update loading state
+        widget.mediaItem.trailers = trailers;
+        widget.mediaItem.cast = cast;
+        widget.mediaItem.similarMovies = similarMovies;
+        _isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        _isLoading = false; // Ensure loading state is updated even on error
-      });
-      _showSnackbar('Failed to check watchlist status');
-    }
-  }
-
-  void _toggleWatchlistStatus() async {
-    setState(() {
-      _isLoading = true; // Set loading state
-    });
-    try {
-      await _firestoreService.toggleWatchlistStatus(widget.mediaItem);
-      await _checkWatchlistStatus(); // Refresh the button state after toggling
-    } catch (e) {
-      _showSnackbar('Failed to update watchlist');
-      setState(() {
-        _isLoading = false; // Reset loading state in case of error
-      });
+      setState(() => _isLoading = false);
+      _showSnackbar("Failed to load additional details: $e");
     }
   }
 
   void _showSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message),
-    ));
-  }
-
-  Widget _buildActionButton() {
-    if (_isLoading) {
-      return FloatingActionButton(
-        onPressed: null, // Disable the button while loading
-        backgroundColor: Colors.grey,
-        child: CircularProgressIndicator(color: Colors.white),
-      );
-    }
-    return FloatingActionButton(
-      onPressed: _toggleWatchlistStatus,
-      backgroundColor: _isInWatchlist ? Colors.red : Colors.green,
-      child: Icon(_isInWatchlist ? Icons.remove : Icons.add),
-      tooltip: _isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist',
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Widget _buildCastList() {
@@ -80,8 +49,8 @@ class _DetailsPageState extends State<DetailsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Text('Cast', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                padding: const EdgeInsets.all(8.0),
+                child: const Text('Cast', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               ),
               Container(
                 height: 120,
@@ -91,13 +60,12 @@ class _DetailsPageState extends State<DetailsPage> {
                   itemBuilder: (context, index) {
                     final actor = widget.mediaItem.cast![index];
                     return Padding(
-                      padding: EdgeInsets.all(4.0),
+                      padding: const EdgeInsets.all(4.0),
                       child: Column(
                         children: [
                           CircleAvatar(
-                            backgroundImage: actor.imageUrl != null ? NetworkImage(actor.imageUrl!) : AssetImage('assets/default_avatar.png') as ImageProvider,
+                            backgroundImage: actor.imageUrl != null ? NetworkImage(actor.imageUrl!) : const AssetImage('assets/default_avatar.png') as ImageProvider,
                             radius: 35,
-                            backgroundColor: Colors.grey.shade200, // Fallback color
                           ),
                           SizedBox(height: 6),
                           Text(actor.name, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
@@ -111,39 +79,53 @@ class _DetailsPageState extends State<DetailsPage> {
             ],
           )
         : Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Text("No cast information available", style: TextStyle(fontSize: 16)),
+            padding: const EdgeInsets.all(8.0),
+            child: const Text("No cast information available", style: TextStyle(fontSize: 16)),
           );
   }
 
-  Widget _buildMediaDetails() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Image.network(
-          widget.mediaItem.posterPath,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Center(child: Text('Image not available', style: TextStyle(fontSize: 16)));
-          },
-        ),
-        Padding(
-          padding: EdgeInsets.all(8.0),
-          child: Text(
-            widget.mediaItem.overview ?? 'No description available.',
-            style: TextStyle(fontSize: 16),
-          ),
-        ),
-        Padding(
-          padding: EdgeInsets.all(8.0),
-          child: Text(
-            'Rating: ${widget.mediaItem.rating ?? 'N/A'}',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-        ),
-        _buildCastList(), // Include the cast list in the media details
-      ],
-    );
+  Widget _buildSimilarMoviesList() {
+    return widget.mediaItem.similarMovies != null && widget.mediaItem.similarMovies!.isNotEmpty
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: const Text('Similar Movies', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              ),
+              Container(
+                height: 200,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: widget.mediaItem.similarMovies!.length,
+                  itemBuilder: (context, index) {
+                    final similarMovie = widget.mediaItem.similarMovies![index];
+                    return GestureDetector(
+                      onTap: () {
+                        // Implement navigation to movie details
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(4.0),
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: Image.network(similarMovie.posterPath, fit: BoxFit.cover),
+                            ),
+                            SizedBox(height: 4),
+                            Text(similarMovie.title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          )
+        : Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: const Text("No similar movies available", style: TextStyle(fontSize: 16)),
+          );
   }
 
   @override
@@ -152,10 +134,40 @@ class _DetailsPageState extends State<DetailsPage> {
       appBar: AppBar(
         title: Text(widget.mediaItem.title),
       ),
-      body: SingleChildScrollView(
-        child: _buildMediaDetails(), // Call the method to build media details
-      ),
-      floatingActionButton: _buildActionButton(),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Image.network(
+                    widget.mediaItem.posterPath,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: 250,
+                    errorBuilder: (context, error, stackTrace) => Center(child: Text('Image not available', style: TextStyle(fontSize: 16))),
+                  ),
+                  if (widget.mediaItem.overview != null)
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        widget.mediaItem.overview!,
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  if (widget.mediaItem.rating != null)
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        'Rating: ${widget.mediaItem.rating}',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  _buildCastList(),
+                  _buildSimilarMoviesList(),
+                ],
+              ),
+            ),
     );
   }
 }
