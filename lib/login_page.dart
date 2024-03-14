@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -14,63 +15,89 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _passwordController = TextEditingController();
 
   Future<void> _loginWithEmail() async {
-    try {
-      await _auth.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isLoggedIn', true);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to sign in. Please check your credentials.')),
-      );
+    if (await _checkInternetConnection()) {
+      try {
+        await _auth.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to sign in. Please check your credentials.')),
+        );
+      }
+    } else {
+      _showNoInternetSnackbar();
     }
   }
 
   Future<void> _loginWithGoogle() async {
-    try {
-      final GoogleSignIn googleSignIn = GoogleSignIn();
-      final GoogleSignInAccount? googleSignInAccount = await googleSignIn.signIn();
+    if (await _checkInternetConnection()) {
+      try {
+        final GoogleSignIn googleSignIn = GoogleSignIn();
+        final GoogleSignInAccount? googleSignInAccount = await googleSignIn.signIn();
 
-      if (googleSignInAccount != null) {
-        final GoogleSignInAuthentication googleSignInAuthentication = await googleSignInAccount.authentication;
+        if (googleSignInAccount != null) {
+          final GoogleSignInAuthentication googleSignInAuthentication = await googleSignInAccount.authentication;
 
-        final AuthCredential credential = GoogleAuthProvider.credential(
-          accessToken: googleSignInAuthentication.accessToken,
-          idToken: googleSignInAuthentication.idToken,
+          final AuthCredential credential = GoogleAuthProvider.credential(
+            accessToken: googleSignInAuthentication.accessToken,
+            idToken: googleSignInAuthentication.idToken,
+          );
+
+          await _auth.signInWithCredential(credential);
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isLoggedIn', true);
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to sign in with Google. Please try again.')),
         );
-
-        await _auth.signInWithCredential(credential);
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('isLoggedIn', true);
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to sign in with Google. Please try again.')),
-      );
+    } else {
+      _showNoInternetSnackbar();
     }
   }
 
   Future<void> _resetPassword() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter your email address to reset your password.')),
-      );
-      return;
-    }
+    if (await _checkInternetConnection()) {
+      final email = _emailController.text.trim();
+      if (email.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Please enter your email address to reset your password.')),
+        );
+        return;
+      }
 
-    try {
-      await _auth.sendPasswordResetEmail(email: email);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('A password reset link has been sent to your email.')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to send password reset email. Please check your email address and try again.')),
-      );
+      try {
+        await _auth.sendPasswordResetEmail(email: email);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('A password reset link has been sent to your email.')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send password reset email. Please check your email address and try again.')),
+        );
+      }
+    } else {
+      _showNoInternetSnackbar();
     }
+  }
+
+  Future<bool> _checkInternetConnection() async {
+    var connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult == ConnectivityResult.none) {
+      return false;
+    }
+    return true;
+  }
+
+  void _showNoInternetSnackbar() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('No internet connection. Please check your connection and try again.')),
+    );
   }
 
   @override
@@ -105,8 +132,8 @@ class _LoginPageState extends State<LoginPage> {
                 onPressed: _loginWithGoogle,
                 child: Text('Sign in with Google'),
                 style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.all(Colors.white), // Button color
-                  foregroundColor: MaterialStateProperty.all(Colors.black), // Text color
+                  backgroundColor: MaterialStateProperty.all(Colors.white),
+                  foregroundColor: MaterialStateProperty.all(Colors.black),
                 ),
               ),
               TextButton(

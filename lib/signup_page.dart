@@ -40,7 +40,7 @@ class _SignupPageState extends State<SignupPage> {
                   email: _emailController.text,
                   password: _passwordController.text,
                 );
-                Navigator.pushReplacementNamed(context, '/home');
+                Navigator.pushReplacementNamed(context, '/login');
               } catch (e) {
                 // Handle error
               }
