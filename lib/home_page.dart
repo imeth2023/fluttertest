@@ -17,6 +17,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   late TabController _contentTabController;
   Future<Map<String, int>>? _genresFuture;
   int? _selectedGenreId;
+  String _selectedGenre = ''; // Variable to hold the selected genre name
   String _mediaType = 'movie'; // Start with 'movie' as the default media type
   String _sortBy = 'popularity.desc'; // Default sort by
   bool _kidsMode = false; // Indicates whether the app is in kids mode
@@ -37,6 +38,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         _mediaType = _mainTabController.index == 0 ? 'movie' : 'tv';
         _genresFuture = _apiService.fetchGenres(_mediaType);
         _selectedGenreId = null; // Reset genre when switching
+        _selectedGenre = ''; // Reset selected genre name
         _sortBy = 'popularity.desc'; // Reset sort by to default when switching between tabs
       });
     }
@@ -104,6 +106,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     onTap: () {
                       setState(() {
                         _selectedGenreId = entry.value;
+                        _selectedGenre = entry.key; // Update the selected genre name
                         Navigator.of(context).pop();
                       });
                     },
@@ -118,6 +121,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               onPressed: () {
                 setState(() {
                   _selectedGenreId = null;
+                  _selectedGenre = ''; // Reset selected genre name
                 });
                 Navigator.of(context).pop();
               },
@@ -200,7 +204,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Movies & TV Shows'),
+        title: Text(_selectedGenre.isNotEmpty ? '$_mediaType - $_selectedGenre' : 'Movies & TV Shows'), // Display selected genre in the app bar title
         bottom: TabBar(
           controller: _mainTabController,
           tabs: [
