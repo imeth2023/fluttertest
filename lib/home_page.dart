@@ -19,6 +19,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   int? _selectedGenreId;
   String _mediaType = 'movie'; // Start with 'movie' as the default media type
   String _sortBy = 'popularity.desc'; // Default sort by
+  bool _kidsMode = false; // Indicates whether the app is in kids mode
 
   @override
   void initState() {
@@ -36,6 +37,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         _mediaType = _mainTabController.index == 0 ? 'movie' : 'tv';
         _genresFuture = _apiService.fetchGenres(_mediaType);
         _selectedGenreId = null; // Reset genre when switching
+        _sortBy = 'popularity.desc'; // Reset sort by to default when switching between tabs
       });
     }
   }
@@ -51,7 +53,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             _sortBy = 'vote_average.desc';
             break;
           case 2:
-            _sortBy = 'revenue.desc'; // For top-grossing, applicable to movies
+            _sortBy = (_mediaType == 'movie') ? 'revenue.desc' : 'popularity.desc';
+            break;
+          default:
+            _sortBy = 'popularity.desc';
             break;
         }
       });
@@ -74,17 +79,37 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           title: Text("Select a Genre"),
           content: SingleChildScrollView(
             child: ListBody(
-              children: genres!.entries.map((entry) {
-                return ListTile(
-                  title: Text(entry.key),
+              children: [
+                // Add a toggle button for Kids mode
+                ListTile(
+                  title: Text(_kidsMode ? 'Turn Off Kids' : 'Turn On Kids'),
                   onTap: () {
                     setState(() {
-                      _selectedGenreId = entry.value;
+                      // Toggle kids mode
+                      _kidsMode = !_kidsMode;
+                      // Get the genre ID for Family when turning on kids mode
+                      if (_kidsMode) {
+                        _selectedGenreId = genres!['Family'];
+                      } else {
+                        _selectedGenreId = null;
+                      }
                       Navigator.of(context).pop();
                     });
                   },
-                );
-              }).toList(),
+                ),
+                // List of genres including Family if not in kids mode
+                ...genres!.entries.map((entry) {
+                  return ListTile(
+                    title: Text(entry.key),
+                    onTap: () {
+                      setState(() {
+                        _selectedGenreId = entry.value;
+                        Navigator.of(context).pop();
+                      });
+                    },
+                  );
+                }).toList(),
+              ],
             ),
           ),
           actions: <Widget>[
@@ -104,30 +129,34 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildMediaList() {
+    Future<List<MediaItem>> fetchFuture;
+
+    if (_selectedGenreId != null) {
+      fetchFuture = _apiService.fetchMediaByGenreAndSort(_mediaType, _selectedGenreId!, sortBy: _sortBy);
+    } else {
+      // Adjust here to fetch default screens for Top Rated and Top Grossing for TV shows
+      fetchFuture = _fetchDefaultScreen();
+    }
+
     return FutureBuilder<List<MediaItem>>(
-      future: _selectedGenreId != null
-          ? _apiService.fetchMediaByGenreAndSort(_mediaType, _selectedGenreId!, sortBy: _sortBy)
-          : Future.value([]),
+      future: fetchFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
         } else if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
         } else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-          return ListView.builder(
+          return GridView.builder(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 0.7,
+              crossAxisSpacing: 16, // Added spacing between each poster
+              mainAxisSpacing: 16, // Added spacing between each poster
+            ),
             itemCount: snapshot.data!.length,
             itemBuilder: (context, index) {
               final item = snapshot.data![index];
-              return ListTile(
-                leading: Image.network(item.posterPath ?? '', width: 100, fit: BoxFit.cover),
-                title: Text(item.title ?? 'No Title'),
-                subtitle: Text(item.overview ?? "No description"),
-                onTap: () {
-                  Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => DetailsPage(mediaItem: item),
-                  ));
-                },
-              );
+              return _buildMediaItem(item);
             },
           );
         } else {
@@ -135,6 +164,36 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         }
       },
     );
+  }
+
+  Widget _buildMediaItem(MediaItem item) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (context) => DetailsPage(mediaItem: item),
+        ));
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(
+          item.posterPath ?? '',
+          fit: BoxFit.cover,
+        ),
+      ),
+    );
+  }
+
+  Future<List<MediaItem>> _fetchDefaultScreen() {
+    switch (_contentTabController.index) {
+      case 0: // Trending
+        return _apiService.fetchTrending(_mediaType);
+      case 1: // Top Rated
+        return _apiService.fetchTopRated(_mediaType);
+      case 2: // Top Grossing for movies, or a chosen metric for TV shows
+        return (_mediaType == 'movie') ? _apiService.fetchTopGrossingMoviesByGenre(0) : _apiService.fetchTopRated(_mediaType);
+      default:
+        return _apiService.fetchTrending(_mediaType);
+    }
   }
 
   @override
@@ -177,7 +236,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               tabs: [
                 Tab(text: 'Trending'),
                 Tab(text: 'Top Rated'),
-                Tab(text: 'Top Grossing'),
+                Tab(text: 'Top Grossing'), // Kept as "Top Grossing" for simplicity, but it fetches top rated for TV
               ],
             ),
           ),
@@ -185,9 +244,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             child: TabBarView(
               controller: _contentTabController,
               children: [
-                _buildMediaList(), // Placeholder for Trending
-                _buildMediaList(), // Placeholder for Top Rated
-                _buildMediaList(), // Placeholder for Top Grossing
+                _buildMediaList(), // For Trending
+                _buildMediaList(), // For Top Rated
+                _buildMediaList(), // For Top Grossing (or alternative metric for TV shows)
               ],
             ),
           ),
