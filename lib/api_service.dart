@@ -17,6 +17,17 @@ class ApiService {
     }
   }
 
+  Future<List<MediaItem>> fetchTopRated(String mediaType) async {
+    final Uri url = Uri.parse('$baseUrl/$mediaType/top_rated?api_key=$apiKey');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final List<dynamic> results = json.decode(response.body)['results'];
+      return results.map<MediaItem>((data) => MediaItem.fromJson(data)).toList();
+    } else {
+      throw Exception('Failed to load top rated $mediaType');
+    }
+  }
+
   Future<List<MediaItem>> fetchMediaByGenre(String mediaType, int genreId, {String sortBy = 'popularity.desc'}) async {
     final url = Uri.parse('$baseUrl/discover/$mediaType?api_key=$apiKey&with_genres=$genreId&sort_by=$sortBy');
     final response = await http.get(url);
@@ -27,6 +38,25 @@ class ApiService {
       throw Exception('Failed to load $mediaType by genre $genreId sorted by $sortBy');
     }
   }
+
+   Future<List<MediaItem>> fetchMediaByGenreAndSort(String mediaType, int genreId, {String sortBy = 'popularity.desc'}) async {
+    final url = Uri.parse('$baseUrl/discover/$mediaType?api_key=$apiKey&with_genres=$genreId&sort_by=$sortBy');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final List results = jsonDecode(response.body)['results'];
+      return results.map<MediaItem>((data) => MediaItem.fromJson(data)).toList();
+    } else {
+      throw Exception('Failed to load $mediaType by genre $genreId sorted by $sortBy');
+    }
+  }
+
+  Future<List<MediaItem>> fetchTopGrossingMoviesByGenre(int genreId) async {
+  // This assumes that sorting by 'revenue.desc' is a valid and supported sort method for movies
+  return fetchMediaByGenreAndSort('movie', genreId, sortBy: 'revenue.desc');
+}
+
+
+   
 
   Future<MediaItem?> fetchMediaDetailsById(String mediaId) async {
     final url = Uri.parse('$baseUrl/movie/$mediaId?api_key=$apiKey');
