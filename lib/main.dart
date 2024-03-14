@@ -4,6 +4,7 @@ import 'firebase_options.dart';
 import 'login_page.dart';
 import 'signup_page.dart';
 import 'home_page.dart';
+import 'user_page.dart'; // Ensure this is the correct path to your UserPage
 import 'package:firebase_auth/firebase_auth.dart';
 
 void main() async {
@@ -33,13 +34,14 @@ class MyApp extends StatelessWidget {
               return LoginPage(); // User is not signed in
             }
           }
-          return CircularProgressIndicator(); // Waiting for authentication state
+          return Scaffold(body: Center(child: CircularProgressIndicator())); // Waiting for authentication state
         },
       ),
       routes: {
         '/login': (context) => LoginPage(),
         '/signup': (context) => SignupPage(),
         '/home': (context) => HomePage(),
+        '/user': (context) => UserPage(), // Route for the user profile page
       },
     );
   }

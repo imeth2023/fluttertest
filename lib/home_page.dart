@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'api_service.dart'; // Make sure this import points to your ApiService
-import 'media_item.dart'; // Ensure this points to your MediaItem model
-import 'details.dart'; // Ensure this points to your DetailsPage
+import 'api_service.dart'; // Adjust the import path as necessary
+import 'media_item.dart'; // Adjust the import path as necessary
+import 'details.dart'; // Adjust the import path as necessary
+import 'watchlist_page.dart'; // Adjust the import path as necessary
+import 'user_page.dart'; // Adjust the import path as necessary
+import 'search_screen.dart'; // Adjust the import path as necessary
 
 class HomePage extends StatefulWidget {
   @override
@@ -15,13 +18,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Future<Map<String, int>>? _genresFuture;
   int? _selectedGenreId;
   String _mediaType = 'movie'; // Start with 'movie' as the default media type
-  String _sortBy = 'popularity.desc'; // Default sort parameter
+  String _sortBy = 'popularity.desc'; // Default sort by
 
   @override
   void initState() {
     super.initState();
     _mainTabController = TabController(length: 2, vsync: this); // Movies and TV Shows
-    _contentTabController = TabController(length: 3, vsync: this); // Trending, Top Rated, and Top Grossing
+    _contentTabController = TabController(length: 3, vsync: this); // Trending, Top Rated, Top Grossing
     _genresFuture = _apiService.fetchGenres(_mediaType);
     _mainTabController.addListener(_handleMainTabChange);
     _contentTabController.addListener(_handleContentTabChange);
@@ -101,16 +104,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildMediaList() {
-    Future<List<MediaItem>> futureMediaItems;
-    if (_selectedGenreId != null) {
-      futureMediaItems = _apiService.fetchMediaByGenreAndSort(_mediaType, _selectedGenreId!, sortBy: _sortBy);
-    } else {
-      // Return an empty list if no genre is selected
-      futureMediaItems = Future.value([]);
-    }
-
     return FutureBuilder<List<MediaItem>>(
-      future: futureMediaItems,
+      future: _selectedGenreId != null
+          ? _apiService.fetchMediaByGenreAndSort(_mediaType, _selectedGenreId!, sortBy: _sortBy)
+          : Future.value([]),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
@@ -152,6 +149,24 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             Tab(text: 'TV Shows'),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.search),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => SearchScreen())),
+          ),
+          IconButton(
+            icon: Icon(Icons.filter_list),
+            onPressed: _showGenreSelector,
+          ),
+          IconButton(
+            icon: Icon(Icons.view_list),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => WatchlistPage())),
+          ),
+          IconButton(
+            icon: Icon(Icons.account_circle),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => UserPage())),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -162,19 +177,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               tabs: [
                 Tab(text: 'Trending'),
                 Tab(text: 'Top Rated'),
-                Tab(text: 'Top Grossing'), // Added "Top Grossing" tab
+                Tab(text: 'Top Grossing'),
               ],
             ),
           ),
           Expanded(
-            child: _buildMediaList(),
+            child: TabBarView(
+              controller: _contentTabController,
+              children: [
+                _buildMediaList(), // Placeholder for Trending
+                _buildMediaList(), // Placeholder for Top Rated
+                _buildMediaList(), // Placeholder for Top Grossing
+              ],
+            ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showGenreSelector,
-        tooltip: 'Select Genre',
-        child: Icon(Icons.filter_list),
       ),
     );
   }
