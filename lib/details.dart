@@ -3,6 +3,7 @@ import 'package:flutter_application_5/media_item.dart'; // Adjust this import pa
 import 'package:flutter_application_5/firestore_service.dart'; // Adjust this import path to where your FirestoreService class is located
 import 'package:flutter_application_5/api_service.dart'; // Adjust this import path to where your ApiService class is located
 
+/// A page that displays the details of a media item.
 class DetailsPage extends StatefulWidget {
   final MediaItem mediaItem;
 
@@ -25,6 +26,7 @@ class _DetailsPageState extends State<DetailsPage> {
     _checkWatchlistStatus();
   }
 
+  /// Fetches additional details for the media item, such as trailers, cast, and similar movies.
   Future<void> _fetchAdditionalDetails() async {
     try {
       final trailers = await _apiService.fetchTrailers('movie', widget.mediaItem.id);
@@ -42,6 +44,7 @@ class _DetailsPageState extends State<DetailsPage> {
     }
   }
 
+  /// Checks the watchlist status of the media item.
   Future<void> _checkWatchlistStatus() async {
     final status = await _firestoreService.isInWatchlist(widget.mediaItem.id);
     setState(() {
@@ -49,15 +52,18 @@ class _DetailsPageState extends State<DetailsPage> {
     });
   }
 
+  /// Toggles the watchlist status of the media item.
   void _toggleWatchlist() async {
     await _firestoreService.toggleWatchlistStatus(widget.mediaItem);
     _checkWatchlistStatus();
   }
 
+  /// Shows a snackbar with the given message.
   void _showSnackbar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Builds the list of cast members for the media item.
   Widget _buildCastList() {
     return widget.mediaItem.cast != null && widget.mediaItem.cast!.isNotEmpty
         ? Column(
@@ -99,6 +105,7 @@ class _DetailsPageState extends State<DetailsPage> {
           );
   }
 
+  /// Builds the list of similar movies for the media item.
   Widget _buildSimilarMoviesList() {
     return widget.mediaItem.similarMovies != null && widget.mediaItem.similarMovies!.isNotEmpty
         ? Column(

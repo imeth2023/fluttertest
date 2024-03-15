@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'media_item.dart'; // Make sure this points to your actual MediaItem and Actor models
+import 'media_item.dart'; 
 
 class ApiService {
   final String apiKey = '8ac4b0da7612dfd2f781452f3d30719a';
   final String baseUrl = 'https://api.themoviedb.org/3';
 
+  // Fetch trending media items
   Future<List<MediaItem>> fetchTrending(String mediaType, {String timeWindow = 'day'}) async {
     final url = Uri.parse('$baseUrl/trending/$mediaType/$timeWindow?api_key=$apiKey');
     final response = await http.get(url);
@@ -17,6 +18,7 @@ class ApiService {
     }
   }
 
+  // Fetch top rated media items
   Future<List<MediaItem>> fetchTopRated(String mediaType) async {
     final Uri url = Uri.parse('$baseUrl/$mediaType/top_rated?api_key=$apiKey');
     final response = await http.get(url);
@@ -28,6 +30,7 @@ class ApiService {
     }
   }
 
+  // Fetch media items by genre
   Future<List<MediaItem>> fetchMediaByGenre(String mediaType, int genreId, {String sortBy = 'popularity.desc'}) async {
     final url = Uri.parse('$baseUrl/discover/$mediaType?api_key=$apiKey&with_genres=$genreId&sort_by=$sortBy');
     final response = await http.get(url);
@@ -39,7 +42,8 @@ class ApiService {
     }
   }
 
-   Future<List<MediaItem>> fetchMediaByGenreAndSort(String mediaType, int genreId, {String sortBy = 'popularity.desc'}) async {
+  // Fetch media items by genre and sort
+  Future<List<MediaItem>> fetchMediaByGenreAndSort(String mediaType, int genreId, {String sortBy = 'popularity.desc'}) async {
     final url = Uri.parse('$baseUrl/discover/$mediaType?api_key=$apiKey&with_genres=$genreId&sort_by=$sortBy');
     final response = await http.get(url);
     if (response.statusCode == 200) {
@@ -50,14 +54,13 @@ class ApiService {
     }
   }
 
+  // Fetch top grossing movies by genre
   Future<List<MediaItem>> fetchTopGrossingMoviesByGenre(int genreId) async {
-  // This assumes that sorting by 'revenue.desc' is a valid and supported sort method for movies
-  return fetchMediaByGenreAndSort('movie', genreId, sortBy: 'revenue.desc');
-}
+    // This assumes that sorting by 'revenue.desc' is a valid and supported sort method for movies
+    return fetchMediaByGenreAndSort('movie', genreId, sortBy: 'revenue.desc');
+  }
 
-
-   
-
+  // Fetch media details by ID
   Future<MediaItem?> fetchMediaDetailsById(String mediaId) async {
     final url = Uri.parse('$baseUrl/movie/$mediaId?api_key=$apiKey');
     final response = await http.get(url);
@@ -71,6 +74,7 @@ class ApiService {
     }
   }
 
+  // Fetch media details with cast
   Future<MediaItem> fetchMediaDetailsWithCast(String mediaId, String mediaType) async {
     final url = Uri.parse('$baseUrl/$mediaType/$mediaId?api_key=$apiKey&append_to_response=credits');
     final response = await http.get(url);
@@ -82,6 +86,7 @@ class ApiService {
     }
   }
 
+  // Search media items
   Future<List<MediaItem>> searchMedia(String query, String mediaType) async {
     final url = Uri.parse('$baseUrl/search/multi?api_key=$apiKey&query=${Uri.encodeComponent(query)}');
     final response = await http.get(url);
@@ -96,8 +101,7 @@ class ApiService {
     }
   }
 
-  
-
+  // Fetch actor details
   Future<Actor> fetchActorDetails(String actorId) async {
     final url = Uri.parse('$baseUrl/person/$actorId?api_key=$apiKey&append_to_response=combined_credits');
     final response = await http.get(url);
@@ -109,6 +113,7 @@ class ApiService {
     }
   }
 
+  // Fetch genres
   Future<Map<String, int>> fetchGenres(String mediaType) async {
     final url = Uri.parse('$baseUrl/genre/$mediaType/list?api_key=$apiKey');
     final response = await http.get(url);
@@ -124,6 +129,7 @@ class ApiService {
     }
   }
 
+  // Search actors
   Future<List<Actor>> searchActors(String query) async {
     final url = Uri.parse('$baseUrl/search/person?api_key=$apiKey&query=${Uri.encodeComponent(query)}');
     final response = await http.get(url);
@@ -135,6 +141,7 @@ class ApiService {
     }
   }
 
+  // Fetch actor filmography
   Future<List<MediaItem>> fetchActorFilmography(String actorId) async {
     final url = Uri.parse('$baseUrl/person/$actorId/combined_credits?api_key=$apiKey');
     final response = await http.get(url);
@@ -146,6 +153,7 @@ class ApiService {
     }
   }
 
+  // Fetch trailers
   Future<List<String>> fetchTrailers(String mediaType, String mediaId) async {
     final response = await http.get(Uri.parse('$baseUrl/$mediaType/$mediaId/videos?api_key=$apiKey'));
     if (response.statusCode == 200) {
@@ -156,6 +164,7 @@ class ApiService {
     }
   }
 
+  // Fetch cast details
   Future<List<Actor>> fetchCastDetails(String mediaType, String mediaId) async {
     final response = await http.get(Uri.parse('$baseUrl/$mediaType/$mediaId/credits?api_key=$apiKey'));
     if (response.statusCode == 200) {
@@ -166,6 +175,7 @@ class ApiService {
     }
   }
 
+  // Fetch similar movies
   Future<List<MediaItem>> fetchSimilarMovies(String mediaType, String mediaId) async {
     final response = await http.get(Uri.parse('$baseUrl/$mediaType/$mediaId/similar?api_key=$apiKey'));
     if (response.statusCode == 200) {
@@ -175,6 +185,4 @@ class ApiService {
       throw Exception('Failed to load similar movies');
     }
   }
-
-  
 }

@@ -21,6 +21,7 @@ class _UserPageState extends State<UserPage> {
     _loadProfileImagePath();
   }
 
+  // Load the profile image path from shared preferences
   void _loadProfileImagePath() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -28,14 +29,16 @@ class _UserPageState extends State<UserPage> {
     });
   }
 
+  // Sign out the user
   void _signOut() async {
     await _auth.signOut();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('isLoggedIn'); // It's better to remove the flag entirely on sign out.
     await prefs.remove('profileImagePath'); // Remove the profile image path as well
-    Navigator.of(context).pushNamed('/login');
+    Navigator.of(context).pushNamedAndRemoveUntil('/login', (Route<dynamic> route) => false);
   }
 
+  // Change the user's password
   void _changePassword() async {
     if (_newPasswordController.text.isNotEmpty) {
       try {
@@ -57,6 +60,7 @@ class _UserPageState extends State<UserPage> {
     }
   }
 
+  // Take a picture using the device's camera
   Future<void> _takePicture() async {
     final ImagePicker _picker = ImagePicker();
     final XFile? image = await _picker.pickImage(source: ImageSource.camera);
@@ -94,6 +98,7 @@ class _UserPageState extends State<UserPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Display the profile image if available
               if (_profileImagePath.isNotEmpty)
                 Center(
                   child: CircleAvatar(

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'api_service.dart'; // Adjust the import path as necessary
-import 'media_item.dart'; // Adjust the import path as necessary
-import 'details.dart'; // Adjust the import path as necessary
-import 'watchlist_page.dart'; // Adjust the import path as necessary
-import 'user_page.dart'; // Adjust the import path as necessary
-import 'search_screen.dart'; // Adjust the import path as necessary
+import 'api_service.dart'; 
+import 'media_item.dart'; 
+import 'details.dart'; 
+import 'watchlist_page.dart'; 
+import 'user_page.dart'; 
+import 'search_screen.dart'; 
 
 class HomePage extends StatefulWidget {
   @override
@@ -231,42 +231,73 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             Tab(text: 'TV Shows'),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.search),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => SearchScreen())),
-          ),
-          IconButton(
-            icon: Icon(Icons.filter_list),
-            onPressed: _showGenreSelector,
-          ),
-          DropdownButton<String>(
-            value: _sortOrder,
-            icon: Icon(Icons.sort),
-            underline: Container(height: 0),
-            onChanged: (String? newValue) {
-              setState(() {
-                _sortOrder = newValue!;
-                _handleContentTabChange(); // Update sort order in UI
-              });
-            },
-            items: <String>['desc', 'asc']
-                .map<DropdownMenuItem<String>>((String value) {
-              return DropdownMenuItem<String>(
-                value: value,
-                child: Text(value.toUpperCase()),
-              );
-            }).toList(),
-          ),
-          IconButton(
-            icon: Icon(Icons.view_list),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => WatchlistPage())),
-          ),
-          IconButton(
-            icon: Icon(Icons.account_circle),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => UserPage())),
-          ),
-        ],
+      ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            DrawerHeader(
+              child: Text('Menu'),
+              decoration: BoxDecoration(
+                color: Colors.blue,
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.search),
+              title: Text('Search'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(MaterialPageRoute(builder: (context) => SearchScreen()));
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.filter_list),
+              title: Text('Filter'),
+              onTap: () {
+                Navigator.pop(context);
+                _showGenreSelector();
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.sort),
+              title: DropdownButton<String>(
+                value: _sortOrder,
+                icon: Icon(Icons.arrow_downward),
+                underline: Container(height: 0),
+                onChanged: (String? newValue) {
+                  Navigator.pop(context);
+                  setState(() {
+                    _sortOrder = newValue!;
+                    _handleContentTabChange(); // Update sort order in UI
+                  });
+                },
+                items: <String>['desc', 'asc']
+                    .map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value.toUpperCase()),
+                  );
+                }).toList(),
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.view_list),
+              title: Text('Watchlist'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(MaterialPageRoute(builder: (context) => WatchlistPage()));
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.account_circle),
+              title: Text('User Page'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(MaterialPageRoute(builder: (context) => UserPage()));
+              },
+            ),
+          ],
+        ),
       ),
       body: Column(
         children: [

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Represents a media item such as a movie or TV show.
 class MediaItem {
   final String id;
   final String title;
@@ -10,6 +11,7 @@ class MediaItem {
   List<String>? trailers;
   List<MediaItem>? similarMovies;
 
+  /// Constructs a [MediaItem] object.
   MediaItem({
     required this.id,
     required this.title,
@@ -21,6 +23,7 @@ class MediaItem {
     this.similarMovies,
   });
 
+  /// Constructs a [MediaItem] object from a JSON map.
   factory MediaItem.fromJson(Map<String, dynamic> json) {
     List<Actor> cast = [];
     if (json.containsKey('credits') && json['credits']['cast'] != null) {
@@ -46,6 +49,7 @@ class MediaItem {
     );
   }
 
+  /// Constructs a [MediaItem] object from a Firestore document snapshot.
   factory MediaItem.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> json = doc.data() as Map<String, dynamic>;
     return MediaItem(
@@ -62,6 +66,7 @@ class MediaItem {
   }
 }
 
+/// Represents an actor in a media item.
 class Actor {
   final String id;
   final String name;
@@ -69,6 +74,7 @@ class Actor {
   final String? imageUrl;
   final String? biography;
 
+  /// Constructs an [Actor] object.
   Actor({
     required this.id,
     required this.name,
@@ -77,6 +83,7 @@ class Actor {
     this.biography,
   });
 
+  /// Constructs an [Actor] object from a JSON map.
   factory Actor.fromJson(Map<String, dynamic> json) {
     return Actor(
       id: json['id'].toString(),

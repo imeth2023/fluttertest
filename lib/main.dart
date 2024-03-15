@@ -38,9 +38,9 @@ class MyApp extends StatelessWidget {
         },
       ),
       routes: {
-        '/login': (context) => LoginPage(),
-        '/signup': (context) => SignupPage(),
-        '/home': (context) => HomePage(),
+        '/login': (context) => LoginPage(), // Route for the login page
+        '/signup': (context) => SignupPage(), // Route for the signup page
+        '/home': (context) => HomePage(), // Route for the home page
         '/user': (context) => UserPage(), // Route for the user profile page
       },
     );

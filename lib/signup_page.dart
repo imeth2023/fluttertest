@@ -18,6 +18,7 @@ class _SignupPageState extends State<SignupPage> {
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          // Email TextField
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(
@@ -25,6 +26,7 @@ class _SignupPageState extends State<SignupPage> {
               decoration: InputDecoration(labelText: 'Email'),
             ),
           ),
+          // Password TextField
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(
@@ -33,13 +35,16 @@ class _SignupPageState extends State<SignupPage> {
               obscureText: true,
             ),
           ),
+          // Sign Up Button
           ElevatedButton(
             onPressed: () async {
               try {
+                // Create user with email and password
                 await _auth.createUserWithEmailAndPassword(
                   email: _emailController.text,
                   password: _passwordController.text,
                 );
+                // Navigate to login page
                 Navigator.pushReplacementNamed(context, '/login');
               } catch (e) {
                 // Handle error

@@ -14,6 +14,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  // Function to handle email login
   Future<void> _loginWithEmail() async {
     if (await _checkInternetConnection()) {
       try {
@@ -33,6 +34,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  // Function to handle Google login
   Future<void> _loginWithGoogle() async {
     if (await _checkInternetConnection()) {
       try {
@@ -61,6 +63,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  // Function to handle password reset
   Future<void> _resetPassword() async {
     if (await _checkInternetConnection()) {
       final email = _emailController.text.trim();
@@ -86,6 +89,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  // Function to check internet connection
   Future<bool> _checkInternetConnection() async {
     var connectivityResult = await (Connectivity().checkConnectivity());
     if (connectivityResult == ConnectivityResult.none) {
@@ -94,6 +98,7 @@ class _LoginPageState extends State<LoginPage> {
     return true;
   }
 
+  // Function to show snackbar for no internet connection
   void _showNoInternetSnackbar() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('No internet connection. Please check your connection and try again.')),

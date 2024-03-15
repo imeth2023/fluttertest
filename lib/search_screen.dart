@@ -27,6 +27,7 @@ class _SearchScreenState extends State<SearchScreen> {
     _initializeSpeechRecognizer();
   }
 
+  // Initialize the speech recognizer
   void _initializeSpeechRecognizer() async {
     bool available = await _speech.initialize(
       onStatus: (val) => print('onStatus: $val'),
@@ -37,6 +38,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
+  // Perform the search based on the query
   void _performSearch(String query) async {
     if (query.isEmpty) return;
     setState(() => _isLoading = true);
@@ -65,6 +67,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
+  // Search for actors based on their names
   Future<List<MediaItem>> _searchActors(List<String> actorNames) async {
     List<List<MediaItem>> filmographies = [];
     for (String actorName in actorNames) {
@@ -78,6 +81,7 @@ class _SearchScreenState extends State<SearchScreen> {
     return filmographies.length == 2 ? _findCommonFilmography(filmographies) : filmographies.isEmpty ? [] : filmographies.first;
   }
 
+  // Fetch the actor ID based on the actor name
   Future<String?> _fetchActorIdByName(String actorName) async {
     final response = await http.get(Uri.parse('$baseUrl/search/person?api_key=$apiKey&query=${Uri.encodeComponent(actorName)}'));
     if (response.statusCode == 200) {
@@ -89,6 +93,7 @@ class _SearchScreenState extends State<SearchScreen> {
     return null;
   }
 
+  // Fetch the filmography of an actor based on their ID
   Future<List<MediaItem>> _fetchActorFilmographyById(String actorId) async {
     final response = await http.get(Uri.parse('$baseUrl/person/$actorId/movie_credits?api_key=$apiKey'));
     if (response.statusCode == 200) {
@@ -98,6 +103,7 @@ class _SearchScreenState extends State<SearchScreen> {
     return [];
   }
 
+  // Find the common filmography between two actors
   List<MediaItem> _findCommonFilmography(List<List<MediaItem>> filmographies) {
     var set1 = filmographies[0].map((e) => e.id).toSet();
     var set2 = filmographies[1].map((e) => e.id).toSet();
@@ -105,6 +111,7 @@ class _SearchScreenState extends State<SearchScreen> {
     return filmographies[0].where((item) => commonIds.contains(item.id)).toList();
   }
 
+  // Fetch movies based on the title
   Future<List<MediaItem>> _fetchMoviesByTitle(String title) async {
     final response = await http.get(Uri.parse('$baseUrl/search/movie?api_key=$apiKey&query=${Uri.encodeComponent(title)}'));
     if (response.statusCode == 200) {
@@ -114,6 +121,7 @@ class _SearchScreenState extends State<SearchScreen> {
     return [];
   }
 
+  // Fetch TV shows based on the title
   Future<List<MediaItem>> _fetchTVShowsByTitle(String title) async {
     final response = await http.get(Uri.parse('$baseUrl/search/tv?api_key=$apiKey&query=${Uri.encodeComponent(title)}'));
     if (response.statusCode == 200) {
@@ -123,6 +131,7 @@ class _SearchScreenState extends State<SearchScreen> {
     return [];
   }
 
+  // Start or stop listening for speech input
   void _listen() async {
     if (!_isListening) {
       bool available = await _speech.initialize();
@@ -157,7 +166,7 @@ class _SearchScreenState extends State<SearchScreen> {
             items: _searchTypes.map<DropdownMenuItem<String>>((String value) {
               return DropdownMenuItem<String>(
                 value: value,
-                child: Text(value.toUpperCase(), style: TextStyle(color: Colors.black)),
+                child: Text(value.toUpperCase(), style: TextStyle(color: Colors.white)),
               );
             }).toList(),
           ),

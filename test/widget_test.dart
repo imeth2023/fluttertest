@@ -1,30 +1,49 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
+import 'package:flutter_application_5/home_page.dart'; // Adjust the import path as necessary
+import 'package:flutter_application_5/api_service.dart'; // Adjust the import path as necessary
+import 'package:flutter_application_5/media_item.dart'; // Adjust the import path as necessary
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/mockito.dart';
+import 'package:provider/provider.dart';
 
-import 'package:flutter_application_5/main.dart';
+// Mock class for ApiService
+class MockApiService extends Mock implements ApiService {}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('HomePage Tests', () {
+    testWidgets('Image is displayed in HomePage', (WidgetTester tester) async {
+      // Create a mock ApiService
+      final mockApiService = MockApiService();
+     var any = "" ;
+      // Setup mock response
+      when(mockApiService.fetchTrending(any)).thenAnswer((_) async => [
+            MediaItem(
+              id: "1",
+              title: 'Test Movie',
+              posterPath: 'https://example.com/test_movie_poster.jpg',
+            ),
+          ]);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+      // Provide the mockApiService to the HomePage wrapped with a Provider
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Provider<ApiService>(
+            create: (_) => mockApiService,
+            child: HomePage(),
+          ),
+        ),
+      );
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+      // Trigger a frame to complete the Future and build the UI
+      await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+      // Verify that an image is displayed
+      expect(find.byType(Image), findsOneWidget);
+
+      // Optionally, verify the image's network URL if needed
+      final Image image = tester.firstWidget(find.byType(Image)) as Image;
+      final NetworkImage networkImage = image.image as NetworkImage;
+      expect(networkImage.url, equals('https://example.com/test_movie_poster.jpg'));
+    });
   });
 }
