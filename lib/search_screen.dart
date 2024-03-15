@@ -1,7 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'api_service.dart'; // Adjust with your actual import path
-import 'media_item.dart'; // Adjust with your actual import path
-import 'details.dart'; // Adjust with your actual import path
+import 'package:http/http.dart' as http;
+import 'media_item.dart'; // Your MediaItem model
+import 'details.dart'; // Your DetailsPage for displaying selected media item details
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class SearchScreen extends StatefulWidget {
@@ -10,14 +11,15 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  final ApiService _apiService = ApiService();
   List<MediaItem> _searchResults = [];
   bool _isLoading = false;
-  String _searchType = "movie"; // Default search type
-  final List<String> _searchTypes = ['actor', 'movie', 'tv']; // Available search types
   final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
   TextEditingController _controller = TextEditingController();
+  String _searchType = 'actor'; // Default search type, you can switch between 'actor', 'movie', 'tv'
+  final List<String> _searchTypes = ['actor', 'movie', 'tv']; // Available search types
+  final String apiKey = '8ac4b0da7612dfd2f781452f3d30719a';
+  final String baseUrl = 'https://api.themoviedb.org/3';
 
   @override
   void initState() {
@@ -26,71 +28,99 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _initializeSpeechRecognizer() async {
-    await _speech.initialize(
+    bool available = await _speech.initialize(
       onStatus: (val) => print('onStatus: $val'),
       onError: (val) => print('onError: $val'),
     );
+    if (!available) {
+      // Handle the case where speech recognition is not available
+    }
   }
 
   void _performSearch(String query) async {
     if (query.isEmpty) return;
-    setState(() {
-      _isLoading = true;
-      _searchResults = [];
-    });
+    setState(() => _isLoading = true);
 
     try {
+      List<MediaItem> results = [];
       if (_searchType == 'actor') {
-        await _handleActorSearch(query);
-      } else {
-        List<MediaItem> mediaItems = await _apiService.searchMedia(query, _searchType);
-        setState(() {
-          _searchResults = mediaItems;
-        });
+        List<String> actorNames = query.split(',').map((name) => name.trim()).toList();
+        if (actorNames.length <= 2) {
+          // Handle actor search logic
+          results = await _searchActors(actorNames);
+        } else {
+          print("Please enter one or two actor names separated by a comma.");
+        }
+      } else if (_searchType == 'movie') {
+        results = await _fetchMoviesByTitle(query);
+      } else if (_searchType == 'tv') {
+        results = await _fetchTVShowsByTitle(query);
       }
+
+      setState(() => _searchResults = results);
     } catch (e) {
       print("Error performing search: $e");
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _handleActorSearch(String query) async {
-    List<String> actorNames = query.split(',').map((name) => name.trim()).toList();
-    if (actorNames.length > 1) {
-      // Handle multi-actor search
-      List<Set<String>> filmographiesIds = [];
-      for (String name in actorNames) {
-        List<Actor> actors = await _apiService.searchActors(name);
-        if (actors.isNotEmpty) {
-          List<MediaItem> filmography = await _apiService.fetchActorFilmography(actors.first.id);
-          Set<String> filmIds = filmography.map((item) => item.id).toSet();
-          filmographiesIds.add(filmIds);
-        }
-      }
-      Set<String> commonFilmIds = filmographiesIds.reduce((a, b) => a.intersection(b));
-      List<MediaItem> commonFilms = [];
-      for (String id in commonFilmIds) {
-        MediaItem? film = await _apiService.fetchMediaDetailsById(id);
-        if (film != null) {
-          commonFilms.add(film);
-        }
-      }
-      setState(() {
-        _searchResults = commonFilms;
-      });
-    } else if (actorNames.isNotEmpty) {
-      // Single actor search
-      List<Actor> actors = await _apiService.searchActors(actorNames.first);
-      if (actors.isNotEmpty) {
-        List<MediaItem> filmography = await _apiService.fetchActorFilmography(actors.first.id);
-        setState(() {
-          _searchResults = filmography;
-        });
+  Future<List<MediaItem>> _searchActors(List<String> actorNames) async {
+    List<List<MediaItem>> filmographies = [];
+    for (String actorName in actorNames) {
+      final actorId = await _fetchActorIdByName(actorName);
+      if (actorId != null) {
+        final filmography = await _fetchActorFilmographyById(actorId);
+        filmographies.add(filmography);
       }
     }
+    // If two actors are searched, find the intersection of their filmographies
+    return filmographies.length == 2 ? _findCommonFilmography(filmographies) : filmographies.isEmpty ? [] : filmographies.first;
+  }
+
+  Future<String?> _fetchActorIdByName(String actorName) async {
+    final response = await http.get(Uri.parse('$baseUrl/search/person?api_key=$apiKey&query=${Uri.encodeComponent(actorName)}'));
+    if (response.statusCode == 200) {
+      final results = json.decode(response.body)['results'];
+      if (results.isNotEmpty) {
+        return results[0]['id'].toString();
+      }
+    }
+    return null;
+  }
+
+  Future<List<MediaItem>> _fetchActorFilmographyById(String actorId) async {
+    final response = await http.get(Uri.parse('$baseUrl/person/$actorId/movie_credits?api_key=$apiKey'));
+    if (response.statusCode == 200) {
+      final results = json.decode(response.body)['cast'];
+      return results.map<MediaItem>((data) => MediaItem.fromJson(data)).toList();
+    }
+    return [];
+  }
+
+  List<MediaItem> _findCommonFilmography(List<List<MediaItem>> filmographies) {
+    var set1 = filmographies[0].map((e) => e.id).toSet();
+    var set2 = filmographies[1].map((e) => e.id).toSet();
+    var commonIds = set1.intersection(set2);
+    return filmographies[0].where((item) => commonIds.contains(item.id)).toList();
+  }
+
+  Future<List<MediaItem>> _fetchMoviesByTitle(String title) async {
+    final response = await http.get(Uri.parse('$baseUrl/search/movie?api_key=$apiKey&query=${Uri.encodeComponent(title)}'));
+    if (response.statusCode == 200) {
+      final results = json.decode(response.body)['results'];
+      return results.map<MediaItem>((data) => MediaItem.fromJson(data)).toList();
+    }
+    return [];
+  }
+
+  Future<List<MediaItem>> _fetchTVShowsByTitle(String title) async {
+    final response = await http.get(Uri.parse('$baseUrl/search/tv?api_key=$apiKey&query=${Uri.encodeComponent(title)}'));
+    if (response.statusCode == 200) {
+      final results = json.decode(response.body)['results'];
+      return results.map<MediaItem>((data) => MediaItem.fromJson(data)).toList();
+    }
+    return [];
   }
 
   void _listen() async {
@@ -100,7 +130,6 @@ class _SearchScreenState extends State<SearchScreen> {
         setState(() => _isListening = true);
         _speech.listen(onResult: (val) => setState(() {
           _controller.text = val.recognizedWords;
-          _performSearch(val.recognizedWords);
         }));
       }
     } else {
@@ -118,19 +147,17 @@ class _SearchScreenState extends State<SearchScreen> {
           DropdownButton<String>(
             underline: Container(),
             value: _searchType,
+            icon: Icon(Icons.arrow_downward, color: Colors.white),
             onChanged: (String? newValue) {
               setState(() {
                 _searchType = newValue!;
                 _searchResults = []; // Clear results on search type change
-                if (_controller.text.isNotEmpty) {
-                  _performSearch(_controller.text);
-                }
               });
             },
             items: _searchTypes.map<DropdownMenuItem<String>>((String value) {
               return DropdownMenuItem<String>(
                 value: value,
-                child: Text(value.toUpperCase()),
+                child: Text(value.toUpperCase(), style: TextStyle(color: Colors.black)),
               );
             }).toList(),
           ),
@@ -149,7 +176,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   onPressed: _listen,
                 ),
               ),
-              onChanged: _performSearch, // Trigger search on text change
+              onSubmitted: _performSearch,
             ),
           ),
           Expanded(
@@ -165,7 +192,9 @@ class _SearchScreenState extends State<SearchScreen> {
                             : Icon(Icons.movie),
                         title: Text(item.title),
                         onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (context) => DetailsPage(mediaItem: item)),
+                          MaterialPageRoute(
+                            builder: (context) => DetailsPage(mediaItem: item),
+                          ),
                         ),
                       );
                     },

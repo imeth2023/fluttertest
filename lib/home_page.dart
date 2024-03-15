@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'api_service.dart'; // Adjust the import path as necessary
 import 'media_item.dart'; // Adjust the import path as necessary
 import 'details.dart'; // Adjust the import path as necessary
@@ -17,29 +18,46 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   late TabController _contentTabController;
   Future<Map<String, int>>? _genresFuture;
   int? _selectedGenreId;
-  String _selectedGenre = ''; // Variable to hold the selected genre name
-  String _mediaType = 'movie'; // Start with 'movie' as the default media type
-  String _sortBy = 'popularity.desc'; // Default sort by
-  bool _kidsMode = false; // Indicates whether the app is in kids mode
+  String _selectedGenre = '';
+  String _mediaType = 'movie';
+  String _sortBy = 'popularity.desc';
+  String _sortOrder = 'desc'; // Added sort order state
+  bool _kidsMode = false;
 
   @override
   void initState() {
     super.initState();
-    _mainTabController = TabController(length: 2, vsync: this); // Movies and TV Shows
-    _contentTabController = TabController(length: 3, vsync: this); // Trending, Top Rated, Top Grossing
-    _genresFuture = _apiService.fetchGenres(_mediaType);
+    _mainTabController = TabController(length: 2, vsync: this);
+    _contentTabController = TabController(length: 3, vsync: this);
+    _checkConnectivityAndFetchGenres();
     _mainTabController.addListener(_handleMainTabChange);
     _contentTabController.addListener(_handleContentTabChange);
+  }
+
+  Future<void> _checkConnectivityAndFetchGenres() async {
+    var connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult == ConnectivityResult.none) {
+      _showNoInternetSnackbar();
+    } else {
+      _genresFuture = _apiService.fetchGenres(_mediaType);
+    }
+  }
+
+  void _showNoInternetSnackbar() {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('No Internet Connection Available'),
+    ));
   }
 
   void _handleMainTabChange() {
     if (!_mainTabController.indexIsChanging) {
       setState(() {
         _mediaType = _mainTabController.index == 0 ? 'movie' : 'tv';
-        _genresFuture = _apiService.fetchGenres(_mediaType);
-        _selectedGenreId = null; // Reset genre when switching
-        _selectedGenre = ''; // Reset selected genre name
-        _sortBy = 'popularity.desc'; // Reset sort by to default when switching between tabs
+        _checkConnectivityAndFetchGenres();
+        _selectedGenreId = null;
+        _selectedGenre = '';
+        _sortBy = 'popularity.desc';
+        _sortOrder = 'desc'; // Reset sort order on main tab change
       });
     }
   }
@@ -49,18 +67,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       setState(() {
         switch (_contentTabController.index) {
           case 0:
-            _sortBy = 'popularity.desc';
+            _sortBy = 'popularity';
             break;
           case 1:
-            _sortBy = 'vote_average.desc';
+            _sortBy = 'vote_average';
             break;
           case 2:
-            _sortBy = (_mediaType == 'movie') ? 'revenue.desc' : 'popularity.desc';
+            _sortBy = (_mediaType == 'movie') ? 'revenue' : 'popularity';
             break;
           default:
-            _sortBy = 'popularity.desc';
+            _sortBy = 'popularity';
             break;
         }
+        // Append sort order to sortBy
+        _sortBy += '.$_sortOrder';
       });
     }
   }
@@ -74,6 +94,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   void _showGenreSelector() async {
     final genres = await _genresFuture;
+    if (genres == null) {
+      _showNoInternetSnackbar();
+      return;
+    }
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -82,16 +106,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           content: SingleChildScrollView(
             child: ListBody(
               children: [
-                // Add a toggle button for Kids mode
                 ListTile(
-                  title: Text(_kidsMode ? 'Turn Off Kids' : 'Turn On Kids'),
+                  title: Text(_kidsMode ? 'Turn Off Kids Mode' : 'Turn On Kids Mode'),
                   onTap: () {
                     setState(() {
-                      // Toggle kids mode
                       _kidsMode = !_kidsMode;
-                      // Get the genre ID for Family when turning on kids mode
                       if (_kidsMode) {
-                        _selectedGenreId = genres!['Family'];
+                        _selectedGenreId = genres['Family'];
                       } else {
                         _selectedGenreId = null;
                       }
@@ -99,14 +120,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     });
                   },
                 ),
-                // List of genres including Family if not in kids mode
-                ...genres!.entries.map((entry) {
+                ...genres.entries.map((entry) {
                   return ListTile(
                     title: Text(entry.key),
                     onTap: () {
                       setState(() {
                         _selectedGenreId = entry.value;
-                        _selectedGenre = entry.key; // Update the selected genre name
+                        _selectedGenre = entry.key;
                         Navigator.of(context).pop();
                       });
                     },
@@ -121,7 +141,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               onPressed: () {
                 setState(() {
                   _selectedGenreId = null;
-                  _selectedGenre = ''; // Reset selected genre name
+                  _selectedGenre = '';
                 });
                 Navigator.of(context).pop();
               },
@@ -138,7 +158,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     if (_selectedGenreId != null) {
       fetchFuture = _apiService.fetchMediaByGenreAndSort(_mediaType, _selectedGenreId!, sortBy: _sortBy);
     } else {
-      // Adjust here to fetch default screens for Top Rated and Top Grossing for TV shows
       fetchFuture = _fetchDefaultScreen();
     }
 
@@ -154,8 +173,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               childAspectRatio: 0.7,
-              crossAxisSpacing: 16, // Added spacing between each poster
-              mainAxisSpacing: 16, // Added spacing between each poster
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
             ),
             itemCount: snapshot.data!.length,
             itemBuilder: (context, index) {
@@ -204,7 +223,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_selectedGenre.isNotEmpty ? '$_mediaType - $_selectedGenre' : 'Movies & TV Shows'), // Display selected genre in the app bar title
+        title: Text(_selectedGenre.isNotEmpty ? '$_mediaType - $_selectedGenre' : 'Movies & TV Shows'),
         bottom: TabBar(
           controller: _mainTabController,
           tabs: [
@@ -220,6 +239,24 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           IconButton(
             icon: Icon(Icons.filter_list),
             onPressed: _showGenreSelector,
+          ),
+          DropdownButton<String>(
+            value: _sortOrder,
+            icon: Icon(Icons.sort),
+            underline: Container(height: 0),
+            onChanged: (String? newValue) {
+              setState(() {
+                _sortOrder = newValue!;
+                _handleContentTabChange(); // Update sort order in UI
+              });
+            },
+            items: <String>['desc', 'asc']
+                .map<DropdownMenuItem<String>>((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(value.toUpperCase()),
+              );
+            }).toList(),
           ),
           IconButton(
             icon: Icon(Icons.view_list),
@@ -240,7 +277,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               tabs: [
                 Tab(text: 'Trending'),
                 Tab(text: 'Top Rated'),
-                Tab(text: 'Top Grossing'), // Kept as "Top Grossing" for simplicity, but it fetches top rated for TV
+                Tab(text: 'Top Grossing'),
               ],
             ),
           ),
@@ -248,9 +285,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             child: TabBarView(
               controller: _contentTabController,
               children: [
-                _buildMediaList(), // For Trending
-                _buildMediaList(), // For Top Rated
-                _buildMediaList(), // For Top Grossing (or alternative metric for TV shows)
+                _buildMediaList(),
+                _buildMediaList(),
+                _buildMediaList(),
               ],
             ),
           ),
